@@ -60,6 +60,7 @@
 #include "main.h"
 #include "gpio.h"
 #include "letimer.h"
+#include "i2c.h"
 
 
 /***********************************************************************************************//**
@@ -130,6 +131,20 @@ void light_node_init()
 		printf("LPN init failed 0x%x\r\n", result);
 	}
 
+	 result = gecko_cmd_mesh_lpn_configure(2, 5 * 1000)->result;
+	  if (result)
+	  {
+	    printf("LPN conf failed (0x%x)\r\n", result);
+	    return;
+	  }
+
+	  printf("trying to find friend...\r\n");
+	  result = gecko_cmd_mesh_lpn_establish_friendship(0)->result;
+
+	  if (result != 0) {
+	    printf("ret.code %x\r\n", result);
+	  }
+
 	memset(&light_states, 0, sizeof(struct light_states));
 	if (load_ps_data())
 	{
@@ -187,12 +202,17 @@ int main()
   initApp();
 
   flag1 = 1;
-
+  flag2 = 1;
 
   gpio_cmu_init();
   letimer_cmu_init();
   gpio_irq_init();
   led_init();
+//  i2c_init();
+//  proximity_powerup_config();
+//  proximity_config();
+
+
   push_buttons_init();
 
 
@@ -217,16 +237,19 @@ int main()
 
   while (1) {
 
-//	  pin_read = GPIO_PinInGet(MOTION_PORT,MOTION_PIN);
-//	  if (!(pin_read))
-//	  {
-//		  GPIO_PinOutSet(LED0_PORT, LED0_PIN);
-//	  }
-//	  else
-//	  {
-//		  GPIO_PinOutToggle(LED0_PORT, LED0_PIN);
-//	  }
+	  pin_read = GPIO_PinInGet(PROXIMITY_PORT,PROXIMITY_PIN);
+	  if (!(pin_read))
+	  {
+		  GPIO_PinOutSet(LED0_PORT, LED0_PIN);
+	  }
+	  else
+	  {
+		  GPIO_PinOutToggle(LED0_PORT, LED0_PIN);
+	  }
 
+	  //ecode = proximity_takemeasurement();
+	  //dist_cm = getdistance();
+	  //printf ("\r\n%d\r\n", dist_cm);
 	  struct gecko_cmd_packet *evt = gecko_wait_event();
 	  bool pass = mesh_bgapi_listener(evt);
 	  if (pass) {
@@ -289,6 +312,20 @@ static void handle_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 			gecko_cmd_system_reset(0);
 			break;
 
+		case SOFT_TIMER_PROVISIONING:
+			LED_state(LED_STATE_PROV);
+			break;
+
+		case SOFT_TIMER_FIND_FRIEND:
+			printf("trying to find friend...\r\n");
+			result = gecko_cmd_mesh_lpn_establish_friendship(0)->result;
+
+			if (result != 0)
+			{
+				printf("ret.code %x\r\n", result);
+			}
+			break;
+
 		default:
 			break;
 		}
@@ -332,15 +369,22 @@ static void handle_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 			printf ("Provisioning Started\r\n");
 			LCD_write("Provisioning Started",LCD_ROW_BTADDR2);
 
+			gecko_cmd_hardware_set_soft_timer(32768 / 4, SOFT_TIMER_PROVISIONING, 0);
+
 			break;
 
 		case gecko_evt_le_connection_opened_id:
 			printf("evt:gecko_evt_le_connection_opened_id\r\n");
+			num_connections++;
 			conn_handle = evt->data.evt_le_connection_opened.connection;
 			break;
 
 		case gecko_evt_le_connection_parameters_id:
 			printf("evt:gecko_evt_le_connection_parameters_id\r\n");
+			break;
+
+		case gecko_evt_mesh_node_model_config_changed_id:
+			printf("model config changed\r\n");
 			break;
 
 		case gecko_evt_mesh_node_key_added_id:
@@ -367,6 +411,7 @@ static void handle_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 			printf("\r\n");
 		}
 		break;
+
 		/*
     case gecko_evt_mesh_node_display_output_oob_id:
 
@@ -384,13 +429,15 @@ static void handle_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 
     	//}
     	break;
-
 		 */
+
 		case gecko_evt_mesh_node_provisioning_failed_id:
 			printf ("Provisioning Failed\r\n");
 			LCD_write("Provisioning Failed",LCD_ROW_BTADDR2);
 
-			//gecko_cmd_mesh_node_start_unprov_beaconing(BEARER);
+			/* start a one-shot timer that will trigger soft reset after small delay */
+			gecko_cmd_hardware_set_soft_timer(2 * 32768, SOFT_TIMER_FACTORY_RESET, 1);
+
 			break;
 
 		case gecko_evt_mesh_node_provisioned_id:
@@ -400,7 +447,39 @@ static void handle_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 			uint32_t ivindex = evt->data.evt_mesh_node_provisioned.iv_index;
 			uint16_t unicast_address = evt->data.evt_mesh_node_provisioned.address;
 			//LCD_write("",LCD_ROW_PASSKEY);
+			gecko_cmd_hardware_set_soft_timer(0, SOFT_TIMER_PROVISIONING, 0);
+			LED_state(LED_STATE_OFF);
 			light_node_init();
+			break;
+
+
+		case gecko_evt_mesh_lpn_friendship_established_id:
+			printf("friendship established\r\n");
+			LCD_write("Friendship", LCD_ROW_BTADDR2);
+			break;
+
+		case gecko_evt_mesh_lpn_friendship_failed_id:
+			printf("friendship failed\r\n");
+			LCD_write("No Friend", LCD_ROW_BTADDR2);
+			// try again in 2 seconds
+			result  = gecko_cmd_hardware_set_soft_timer(32768*2, SOFT_TIMER_FIND_FRIEND, 1)->result;
+			if (result) {
+				printf("timer failure?!  %x\r\n", result);
+			}
+			break;
+
+		case gecko_evt_mesh_lpn_friendship_terminated_id:
+			printf("friendship terminated\r\n");
+			LCD_write("Friend lost",LCD_ROW_BTADDR2);
+			if (num_connections == 0)
+			{
+				// try again in 2 seconds
+				result  = gecko_cmd_hardware_set_soft_timer(32768*2, SOFT_TIMER_FIND_FRIEND, 1)->result;
+				if (result)
+				{
+					printf("timer failure?!  %x\r\n", result);
+				}
+			}
 			break;
 
 		case gecko_evt_le_connection_closed_id:
@@ -411,7 +490,22 @@ static void handle_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 			}
 			printf("gecko_evt_le_connection_closed_id\r\n");
 			conn_handle = 0xFF;
+			num_connections--;
+//			if (num_connections > 0)
+//			{
+//				if (--num_connections == 0)
+//				{
+//					lpn_init();
+//				}
+//			}
+
 			break;
+
+		case gecko_evt_mesh_node_reset_id:
+			printf("evt gecko_evt_mesh_node_reset_id\r\n");
+			initiate_factory_reset();
+			break;
+
 
 
 		case gecko_evt_system_external_signal_id:
@@ -436,6 +530,32 @@ static void handle_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 				printf("TIMER STARTED");
 				/* Configure and Enable GPIO Interrupt For MOTION SENSOR*/
 				GPIO_IntConfig(MOTION_PORT,MOTION_PIN,RISING_EDGE,FALLING_EDGE,INTERRUPT_ENABLE);
+
+			}
+
+			if (evt->data.evt_system_external_signal.extsignals & PROXIMITY_EVENT)
+			{
+				CORE_ATOMIC_IRQ_DISABLE();
+				EXT_EVENT &= ~PROXIMITY_EVENT;
+				CORE_ATOMIC_IRQ_ENABLE();
+				//if (flag2==1)
+				//{
+					ecode = proximity_takemeasurement();
+					dist_cm = getdistance();
+					GPIO_PinOutToggle(LED0_PORT,LED0_PIN);
+					GPIO_PinOutToggle(LED1_PORT,LED1_PIN);
+//					flag2 = 0;
+				//}
+
+//				LETIMER_Reset(LETIMER0);
+//				letimer_init();
+//				letimer_start();
+
+				printf("\r\noOBJECT DETECTED\r\n");
+				//printf("\r\n%d\r\n", dist_cm);
+
+				/* Configure and Enable GPIO Interrupt For MOTION SENSOR*/
+				GPIO_IntConfig(PROXIMITY_PORT,PROXIMITY_PIN,RISING_EDGE,FALLING_EDGE,INTERRUPT_ENABLE);
 
 			}
 

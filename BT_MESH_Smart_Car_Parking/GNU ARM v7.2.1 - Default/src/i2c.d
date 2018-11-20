@@ -1,10 +1,5 @@
-main.o: ../main.c ../init_mcu.h ../init_board.h ../init_app.h \
- ../ble-configuration.h ../board_features.h \
- C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\protocol\bluetooth\bt_mesh\inc\common/bg_types.h \
- C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\protocol\bluetooth\bt_mesh\inc\soc/native_gecko.h \
- C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking/hal-config.h \
- C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking/board_features.h \
- C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\hardware\kit\EFR32BG13_BRD4104A\config/hal-config-board.h \
+src/i2c.o: ../src/i2c.c ../src/i2c.h \
+ C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\platform\emlib\inc/em_i2c.h \
  C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\platform\Device\SiliconLabs\EFR32BG13P\Include/em_device.h \
  C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\platform\Device\SiliconLabs\EFR32BG13P\Include/efr32bg13p632f512gm48.h \
  C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\platform\CMSIS\Include/core_cm4.h \
@@ -59,58 +54,29 @@ main.o: ../main.c ../init_mcu.h ../init_board.h ../init_app.h \
  C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\platform\Device\SiliconLabs\EFR32BG13P\Include/efr32bg13p_dmareq.h \
  C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\platform\Device\SiliconLabs\EFR32BG13P\Include/efr32bg13p_af_ports.h \
  C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\platform\Device\SiliconLabs\EFR32BG13P\Include/efr32bg13p_af_pins.h \
- C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\platform\halconfig\inc\hal-config/hal-config-types.h \
+ ../src/gpio.h \
  C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\platform\emlib\inc/em_gpio.h \
  C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\platform\emlib\inc/em_bus.h \
  C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\platform\emlib\inc/em_assert.h \
+ C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\platform\emlib\inc/em_cmu.h \
+ C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking/hal-config.h \
+ C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking/board_features.h \
+ C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking/ble-configuration.h \
+ C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\hardware\kit\EFR32BG13_BRD4104A\config/hal-config-board.h \
+ C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\platform\halconfig\inc\hal-config/hal-config-types.h \
  C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking/hal-config-app-common.h \
+ C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\protocol\bluetooth\bt_mesh\inc\soc/native_gecko.h \
+ C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\protocol\bluetooth\bt_mesh\inc\common/bg_types.h \
  C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\protocol\bluetooth\bt_mesh\inc\common/gecko_configuration.h \
  C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\protocol\bluetooth\bt_mesh\inc\common/bg_gattdb_def.h \
  C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\protocol\bluetooth\bt_mesh\inc\common/bg_types.h \
  C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\protocol\bluetooth\bt_mesh\inc\common/bg_errorcodes.h \
- ../gatt_db.h \
- C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\protocol\bluetooth\bt_mesh\inc\common/bg_gattdb_def.h \
- C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\protocol\bluetooth\bt_mesh\inc\common/mesh_sizes.h \
- C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking/mesh_app_memory_config.h \
- C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\platform\emlib\inc/em_emu.h \
- C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\platform\emlib\inc/em_cmu.h \
- ../hal-config.h \
- C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\lcdGraphics/lcd_driver.h \
- c:\siliconlabsnew\developer\sdks\blemesh\v1.3\hardware\kit\common\drivers\retargetserial.h \
- C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\hardware\kit\common\halconfig/retargetserialhalconfig.h \
- C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\hardware\kit\common\halconfig/bsphalconfig.h \
- C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\hardware\kit\common\bsp/bsp_bcp.h \
- C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\protocol\bluetooth\bt_mesh\inc/mesh_generic_model_capi_types.h \
- C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\protocol\bluetooth\bt_mesh\inc/mesh_lighting_model_capi_types.h \
- C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\protocol\bluetooth\bt_mesh\inc/mesh_lib.h \
  C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\platform\emlib\inc/em_core.h \
- C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\platform\emlib\inc/em_common.h \
- ../main.h \
- C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\src/gpio.h \
- C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\src/letimer.h \
- C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\platform\emlib\inc/em_letimer.h \
- C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\src/i2c.h \
- C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\platform\emlib\inc/em_i2c.h
+ C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\platform\emlib\inc/em_common.h
 
-../init_mcu.h:
+../src/i2c.h:
 
-../init_board.h:
-
-../init_app.h:
-
-../ble-configuration.h:
-
-../board_features.h:
-
-C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\protocol\bluetooth\bt_mesh\inc\common/bg_types.h:
-
-C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\protocol\bluetooth\bt_mesh\inc\soc/native_gecko.h:
-
-C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking/hal-config.h:
-
-C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking/board_features.h:
-
-C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\hardware\kit\EFR32BG13_BRD4104A\config/hal-config-board.h:
+C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\platform\emlib\inc/em_i2c.h:
 
 C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\platform\Device\SiliconLabs\EFR32BG13P\Include/em_device.h:
 
@@ -220,7 +186,7 @@ C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\platform\
 
 C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\platform\Device\SiliconLabs\EFR32BG13P\Include/efr32bg13p_af_pins.h:
 
-C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\platform\halconfig\inc\hal-config/hal-config-types.h:
+../src/gpio.h:
 
 C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\platform\emlib\inc/em_gpio.h:
 
@@ -228,7 +194,23 @@ C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\platform\
 
 C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\platform\emlib\inc/em_assert.h:
 
+C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\platform\emlib\inc/em_cmu.h:
+
+C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking/hal-config.h:
+
+C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking/board_features.h:
+
+C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking/ble-configuration.h:
+
+C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\hardware\kit\EFR32BG13_BRD4104A\config/hal-config-board.h:
+
+C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\platform\halconfig\inc\hal-config/hal-config-types.h:
+
 C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking/hal-config-app-common.h:
+
+C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\protocol\bluetooth\bt_mesh\inc\soc/native_gecko.h:
+
+C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\protocol\bluetooth\bt_mesh\inc\common/bg_types.h:
 
 C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\protocol\bluetooth\bt_mesh\inc\common/gecko_configuration.h:
 
@@ -238,48 +220,6 @@ C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\protocol\
 
 C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\protocol\bluetooth\bt_mesh\inc\common/bg_errorcodes.h:
 
-../gatt_db.h:
-
-C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\protocol\bluetooth\bt_mesh\inc\common/bg_gattdb_def.h:
-
-C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\protocol\bluetooth\bt_mesh\inc\common/mesh_sizes.h:
-
-C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking/mesh_app_memory_config.h:
-
-C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\platform\emlib\inc/em_emu.h:
-
-C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\platform\emlib\inc/em_cmu.h:
-
-../hal-config.h:
-
-C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\lcdGraphics/lcd_driver.h:
-
-c:\siliconlabsnew\developer\sdks\blemesh\v1.3\hardware\kit\common\drivers\retargetserial.h:
-
-C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\hardware\kit\common\halconfig/retargetserialhalconfig.h:
-
-C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\hardware\kit\common\halconfig/bsphalconfig.h:
-
-C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\hardware\kit\common\bsp/bsp_bcp.h:
-
-C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\protocol\bluetooth\bt_mesh\inc/mesh_generic_model_capi_types.h:
-
-C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\protocol\bluetooth\bt_mesh\inc/mesh_lighting_model_capi_types.h:
-
-C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\protocol\bluetooth\bt_mesh\inc/mesh_lib.h:
-
 C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\platform\emlib\inc/em_core.h:
 
 C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\platform\emlib\inc/em_common.h:
-
-../main.h:
-
-C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\src/gpio.h:
-
-C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\src/letimer.h:
-
-C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\platform\emlib\inc/em_letimer.h:
-
-C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\src/i2c.h:
-
-C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\platform\emlib\inc/em_i2c.h:

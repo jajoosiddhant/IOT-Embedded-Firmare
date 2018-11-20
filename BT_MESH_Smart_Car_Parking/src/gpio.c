@@ -28,19 +28,23 @@ void gpio_irq_init()
 {
 	GPIO_PinModeSet(MOTION_PORT, MOTION_PIN, gpioModeInputPull, MOTION_DEFAULT);
 	/*Clear all the Gpio interrupts Flags*/
+
+	GPIO_PinModeSet(PROXIMITY_PORT, PROXIMITY_PIN, gpioModeInputPull, PROXIMITY_DEFAULT);
+	/*Clear all the Gpio interrupts Flags*/
+
 	GPIO->IFC = 0x00000000;
 
 	/* Configure and Enable GPIO Interrupt For MOTION SENSOR*/
 	GPIO_IntConfig(MOTION_PORT,MOTION_PIN,RISING_EDGE,FALLING_EDGE,INTERRUPT_ENABLE);
 
-	/* Configure and Enable GPIO Interrupt For Push Button 0*/
-	//GPIO_IntConfig(PB0_port,PB0_pin,rising_edge,falling_edge,interrupt_enable);
+	/* Configure and Enable GPIO Interrupt For MOTION SENSOR*/
+	GPIO_IntConfig(PROXIMITY_PORT,PROXIMITY_PIN,RISING_EDGE,FALLING_EDGE,INTERRUPT_ENABLE);
 
 	/*Enable NVIC interrupt*/
 	NVIC_EnableIRQ(GPIO_ODD_IRQn);
 
 	/*Enable NVIC interrupt*/
-	//NVIC_EnableIRQ(GPIO_EVEN_IRQn);
+	NVIC_EnableIRQ(GPIO_EVEN_IRQn);
 
 }
 
@@ -74,3 +78,53 @@ void GPIO_ODD_IRQHandler(void)
 		/*Disable all interrupts*/
 		CORE_ATOMIC_IRQ_ENABLE();
 }
+
+
+void GPIO_EVEN_IRQHandler(void)
+{
+	/*Disable all interrupts*/
+		CORE_ATOMIC_IRQ_DISABLE();
+
+		/*Clear all Interrupt flags*/
+		GPIO->IFC = 0x00000000;
+
+		/*Update external event Scheduler Values*/
+		EXT_EVENT |= PROXIMITY_EVENT;
+
+		gecko_external_signal(EXT_EVENT);
+
+		/*Disable all Interrupts*/
+		GPIO->IEN = 0x00000000;
+
+		/*Disable all interrupts*/
+		CORE_ATOMIC_IRQ_ENABLE();
+}
+
+/**
+ * Update the state of LEDs. Takes one parameter LED_STATE_xxx that defines
+ * the new state.
+ */
+void LED_state(int state)
+{
+  switch (state) {
+    case LED_STATE_OFF:
+    	GPIO_PinOutClear(LED0_PORT, LED0_PIN);
+    	GPIO_PinOutClear(LED1_PORT, LED1_PIN);
+      break;
+
+    case LED_STATE_ON:
+    	GPIO_PinOutSet(LED0_PORT, LED0_PIN);
+    	GPIO_PinOutSet(LED1_PORT, LED1_PIN);
+      break;
+
+    case LED_STATE_PROV:
+      GPIO_PinOutToggle(LED0_PORT, LED0_PIN);
+      GPIO_PinOutToggle(LED1_PORT, LED1_PIN);
+      break;
+
+    default:
+      break;
+  }
+}
+
+

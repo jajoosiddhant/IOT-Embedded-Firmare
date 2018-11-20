@@ -24,6 +24,8 @@
 
 #define SOFT_TIMER_1				(50)
 #define SOFT_TIMER_FACTORY_RESET 	(51)
+#define SOFT_TIMER_PROVISIONING		(52)
+#define SOFT_TIMER_FIND_FRIEND		(53)
 
 static PACKSTRUCT(struct light_states
 {
@@ -35,10 +37,12 @@ static PACKSTRUCT(struct light_states
 
 
 // GLOBAL VARIABLES
+uint8 num_connections = 0;
 static uint8_t conn_handle = 0xFF;
 uint16_t pin_read;
 uint16_t result;
 uint8_t flag1;
+uint8_t flag2;
 char string_disp[30];
 uint8_t netkey_type;
 uint16_t key_index;
