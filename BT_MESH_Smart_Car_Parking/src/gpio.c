@@ -106,25 +106,30 @@ void GPIO_EVEN_IRQHandler(void)
  */
 void LED_state(int state)
 {
-  switch (state) {
-    case LED_STATE_OFF:
-    	GPIO_PinOutClear(LED0_PORT, LED0_PIN);
-    	GPIO_PinOutClear(LED1_PORT, LED1_PIN);
-      break;
+	switch (state) {
+	case LED_STATE_OFF:
+		GPIO_PinOutClear(LED0_PORT, LED0_PIN);
+		GPIO_PinOutClear(LED1_PORT, LED1_PIN);
+		break;
 
-    case LED_STATE_ON:
-    	GPIO_PinOutSet(LED0_PORT, LED0_PIN);
-    	GPIO_PinOutSet(LED1_PORT, LED1_PIN);
-      break;
+	case LED_STATE_ON:
+		GPIO_PinOutSet(LED0_PORT, LED0_PIN);
+		GPIO_PinOutSet(LED1_PORT, LED1_PIN);
+		break;
 
-    case LED_STATE_PROV:
-      GPIO_PinOutToggle(LED0_PORT, LED0_PIN);
-      GPIO_PinOutToggle(LED1_PORT, LED1_PIN);
-      break;
+	case LED_STATE_RESTORE:
+		GPIO_PinOutSet(LED0_PORT, LED0_PIN);
+		GPIO_PinOutToggle(LED1_PORT, LED1_PIN);
+		break;
 
-    default:
-      break;
-  }
+	case LED_STATE_PROV:
+		GPIO_PinOutToggle(LED0_PORT, LED0_PIN);
+		GPIO_PinOutToggle(LED1_PORT, LED1_PIN);
+		break;
+
+	default:
+		break;
+	}
 }
 
 

@@ -149,8 +149,77 @@ void light_node_init()
 	if (load_ps_data())
 	{
 		printf("lightbulb_state_load() failed, using defaults\r\n");
-//		goto publish;
+		printf("Skipped power up routine\r\n");
+		goto publish;
 	}
+
+	// Handle on power up behavior
+	switch (light_states.onpowerup)
+	{
+	case MESH_GENERIC_ON_POWER_UP_STATE_OFF:
+		printf("On power up state is OFF\r\n");
+		light_states.onoff_current = MESH_GENERIC_ON_OFF_STATE_OFF;
+		light_states.onoff_target = MESH_GENERIC_ON_OFF_STATE_OFF;
+		LED_state(LED_STATE_OFF);
+		/*Write the command to set the Lights OFF here along with saving the data in PS Store */
+		break;
+
+	case MESH_GENERIC_ON_POWER_UP_STATE_ON:
+		printf("On power up state is ON\r\n");
+		light_states.onoff_current = MESH_GENERIC_ON_OFF_STATE_ON;
+		light_states.onoff_target = MESH_GENERIC_ON_OFF_STATE_ON;
+		LED_state(LED_STATE_ON);
+		/*Write the command to set the Lights OFF here along with saving the data in PS Store */
+		break;
+
+	case MESH_GENERIC_ON_POWER_UP_STATE_RESTORE:
+		printf("On power up state is RESTORE\r\n");
+		LED_state(LED_STATE_RESTORE);
+		if (light_states.onoff_current != light_states.onoff_target)
+		{
+//			uint32_t transition_ms = default_transition_time();
+			printf("CURRENT != TARGET\r\n");
+			if (light_states.onoff_target == MESH_GENERIC_ON_OFF_STATE_OFF)
+			{
+				LED_state(LED_STATE_OFF);
+				/*Write the command to set the Lights OFF here along with saving the data in PS Store */
+			}
+			else
+			{
+				LED_state(LED_STATE_ON);
+				/*Write the command to set the Lights OFF here along with saving the data in PS Store */
+			}
+
+			light_states.onoff_current = light_states.onoff_target;
+
+		}
+		else
+		{
+			printf("Keeping loaded state\r\n");
+			printf("CURRENT == TARGET\r\n");
+			if (light_states.onoff_current == MESH_GENERIC_ON_OFF_STATE_OFF)
+			{
+				LED_state(LED_STATE_OFF);
+				/*Write the command to set the Lights OFF here along with saving the data in PS Store */
+			}
+			else
+			{
+				LED_state(LED_STATE_ON);
+				/*Write the command to set the Lights OFF here along with saving the data in PS Store */
+			}
+		}
+		break;
+	}
+
+
+
+	publish:
+	lightstate_save();
+//	light_states.onoff_target = 5;
+//	printf("Structure values: %d,%d,%d,%d,%d,%d \r\n",light_states.light_onstate, light_states.motion_t, light_states.proximity_t
+//			,light_states.onoff_current, light_states.onoff_target, light_states.onpowerup);
+
+
 }
 
 
@@ -166,13 +235,35 @@ static int load_ps_data()
 		light_states.light_onstate = false;
 		light_states.motion_t = MOTION_T;
 		light_states.proximity_t = PROXIMITY_T;
+		light_states.onoff_current = MESH_GENERIC_ON_OFF_STATE_OFF;
+		light_states.onoff_target = MESH_GENERIC_ON_OFF_STATE_ON;
+		light_states.onpowerup = MESH_GENERIC_ON_POWER_UP_STATE_RESTORE;
+
 		return 1;
 	}
 	memcpy(&light_states, ps_load->value.data, ps_load->value.len);
 	return 0;
 }
 
+/**
+ * this function saves the current light state in Persistent Storage so that
+ * the data is preserved over reboots and power cycles. The light state is hold
+ * in a global variable lightbulb_state. a PS key with ID 0x4004 is used to store
+ * the whole struct.
+ */
+static int save_ps_data(void)
+{
+  struct gecko_msg_flash_ps_save_rsp_t* pSave;
 
+  pSave = gecko_cmd_flash_ps_save(0x4004, sizeof(struct light_states), (const uint8*)&light_states);
+
+  if (pSave->result) {
+    printf("lightbulb_state_store(): PS save failed, code %x\r\n", pSave->result);
+    return(-1);
+  }
+
+  return 0;
+}
 
 void initiate_factory_reset()
 {
@@ -190,7 +281,17 @@ gecko_cmd_flash_ps_erase_all();
 gecko_cmd_hardware_set_soft_timer(2 * 32768, SOFT_TIMER_FACTORY_RESET, 1);
 }
 
+/*
+static uint32_t default_transition_time(void)
+{
+  return mesh_lib_transition_time_to_ms(light_states.transtime);
+}
+*/
 
+static void lightstate_save(void)
+{
+gecko_cmd_hardware_set_soft_timer(32678 * 3, SOFT_TIMER_LIGHTSTATE_SAVE, 1);
+}
 
 int main()
 {
@@ -211,9 +312,18 @@ int main()
 //  i2c_init();
 //  proximity_powerup_config();
 //  proximity_config();
-
-
   push_buttons_init();
+
+  light_states.light_onstate = true;
+  light_states.motion_t = 5;
+  light_states.proximity_t = 5;
+  light_states.onoff_current = 7;
+  light_states.onoff_target = 7;
+  light_states.onpowerup = 7;
+
+
+  printf("PS to be stored initial Values:%d ,%d, %d, %d, %d, %d\r\n", light_states.light_onstate, light_states.motion_t, light_states.proximity_t
+		  ,light_states.onoff_current, light_states.onoff_target, light_states.onpowerup);
 
 
   RETARGET_SerialInit();
@@ -237,15 +347,15 @@ int main()
 
   while (1) {
 
-	  pin_read = GPIO_PinInGet(PROXIMITY_PORT,PROXIMITY_PIN);
-	  if (!(pin_read))
-	  {
-		  GPIO_PinOutSet(LED0_PORT, LED0_PIN);
-	  }
-	  else
-	  {
-		  GPIO_PinOutToggle(LED0_PORT, LED0_PIN);
-	  }
+//	  pin_read = GPIO_PinInGet(PROXIMITY_PORT,PROXIMITY_PIN);
+//	  if (!(pin_read))
+//	  {
+//		  GPIO_PinOutSet(LED0_PORT, LED0_PIN);
+//	  }
+//	  else
+//	  {
+//		  GPIO_PinOutToggle(LED0_PORT, LED0_PIN);
+//	  }
 
 	  //ecode = proximity_takemeasurement();
 	  //dist_cm = getdistance();
@@ -303,12 +413,12 @@ static void handle_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 		switch (evt->data.evt_hardware_soft_timer.handle)
 		{
 		case SOFT_TIMER_1:
-			printf("Software Timer Implementation Successful");
+			printf("Software Timer Implementation Successful\r\n");
 			break;
 
 
 		case SOFT_TIMER_FACTORY_RESET:
-			printf("Factory Reset Successful");
+			printf("Factory Reset Successful\r\n");
 			gecko_cmd_system_reset(0);
 			break;
 
@@ -325,6 +435,16 @@ static void handle_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 				printf("ret.code %x\r\n", result);
 			}
 			break;
+
+		case SOFT_TIMER_LIGHTSTATE_SAVE:
+			printf("Saving the latest state values\r\n");
+			save_ps_data();
+			load_ps_data();
+			printf("Structure values: %d,%d,%d,%d,%d,%d\r\n",light_states.light_onstate, light_states.motion_t, light_states.proximity_t
+					,light_states.onoff_current, light_states.onoff_target, light_states.onpowerup);
+
+			break;
+
 
 		default:
 			break;
@@ -455,6 +575,7 @@ static void handle_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 
 		case gecko_evt_mesh_lpn_friendship_established_id:
 			printf("friendship established\r\n");
+			printf("Address : %x\r\n",evt->data.evt_mesh_lpn_friendship_established.friend_address);
 			LCD_write("Friendship", LCD_ROW_BTADDR2);
 			break;
 

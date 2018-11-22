@@ -50,9 +50,10 @@
  *  State of the LEDs is updated by calling LED_set_state().
  *  The new state is passed as parameter, possible values are defined below.
  */
-#define LED_STATE_OFF    0   /* light off (both LEDs turned off)   */
-#define LED_STATE_ON     1   /* light on (both LEDs turned on)     */
-#define LED_STATE_PROV   3   /* provisioning (LEDs blinking)       */
+#define LED_STATE_OFF    	0   /* light off (both LEDs turned off)   */
+#define LED_STATE_ON     	1   /* light on (both LEDs turned on)     */
+#define LED_STATE_RESTORE	2   /* light on (LED0 turned on , LED1 blinking )     */
+#define LED_STATE_PROV   	3   /* provisioning (LEDs blinking)       */
 
 
 void gpio_cmu_init(void);

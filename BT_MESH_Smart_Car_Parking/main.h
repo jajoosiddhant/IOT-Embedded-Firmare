@@ -19,13 +19,14 @@
 #define	LOCATION_BITMASK 	(0x01)
 
 #define PSKEY				(0x4004)
-#define MOTION_T			(0)
-#define PROXIMITY_T			(0)
+#define MOTION_T			(100)		//Random Value for Testing
+#define PROXIMITY_T			(900)		//Random Value for Testing
 
 #define SOFT_TIMER_1				(50)
 #define SOFT_TIMER_FACTORY_RESET 	(51)
 #define SOFT_TIMER_PROVISIONING		(52)
 #define SOFT_TIMER_FIND_FRIEND		(53)
+#define SOFT_TIMER_LIGHTSTATE_SAVE	(54)
 
 static PACKSTRUCT(struct light_states
 {
@@ -33,6 +34,14 @@ static PACKSTRUCT(struct light_states
 	uint16_t motion_t;
 	uint16_t proximity_t;
 
+	uint8_t onoff_current;
+	uint8_t onoff_target;
+
+	// Transition Time Server state
+	uint8_t transtime;
+
+	// On Power Up Server state
+	uint8_t onpowerup;
 })light_states;
 
 
@@ -51,4 +60,8 @@ void initiate_factory_reset(void);
 void push_buttons_init(void);
 void light_node_init(void);
 static int load_ps_data(void);
+static int save_ps_data(void);
+static uint32_t default_transition_time(void);
+static void lightstate_save(void);
+
 #endif /* SRC_MAIN_H_ */
