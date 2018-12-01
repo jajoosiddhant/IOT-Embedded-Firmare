@@ -16,7 +16,7 @@
 
 
 
-#define LETIMER_EVENT		(0x08)
+#define LETIMER_EVENT		(0x08)	//Scheduler Event Flag for LETIMER
 #define wait_timeperiod		(120)	//seconds
 
 volatile uint32_t EXT_EVENT;
@@ -29,4 +29,5 @@ void letimer_init(void);
 void letimer_start(void);
 void letimer_stop(void);
 void prescale(void);
+
 #endif /* SRC_LETIMER_H_ */

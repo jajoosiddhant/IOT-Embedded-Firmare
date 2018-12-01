@@ -55,6 +55,7 @@
 #include "mesh_lighting_model_capi_types.h"
 #include "mesh_lib.h"
 #include "em_core.h"
+#include "bg_errorcodes.h"
 #include <mesh_sizes.h>
 
 #include "main.h"
@@ -117,7 +118,12 @@ void mesh_native_bgapi_init(void);
 bool mesh_bgapi_listener(struct gecko_cmd_packet *evt);
 
 
-
+/**
+ * Initialize LPN functionality with configuration and friendship establishment
+ * Also includes function calls to store and save data in persistent storage.
+ * Includes a power-up routine behaviour
+ * Function Call to Model initialization
+ */
 void light_node_init()
 {
 //	 Initialize mesh lib
@@ -125,6 +131,7 @@ void light_node_init()
 
 	//Initialize Friend functionality
 	printf("LPN mode initialization\r\n");
+	/*
 	result = gecko_cmd_mesh_lpn_init()->result;
 	if (result)
 	{
@@ -144,7 +151,7 @@ void light_node_init()
 	  if (result != 0) {
 	    printf("ret.code %x\r\n", result);
 	  }
-
+	 */
 	memset(&light_states, 0, sizeof(struct light_states));
 	if (load_ps_data())
 	{
@@ -161,7 +168,6 @@ void light_node_init()
 		light_states.onoff_current = MESH_GENERIC_ON_OFF_STATE_OFF;
 		light_states.onoff_target = MESH_GENERIC_ON_OFF_STATE_OFF;
 		LED_state(LED_STATE_OFF);
-		/*Write the command to set the Lights OFF here along with saving the data in PS Store */
 		break;
 
 	case MESH_GENERIC_ON_POWER_UP_STATE_ON:
@@ -169,7 +175,6 @@ void light_node_init()
 		light_states.onoff_current = MESH_GENERIC_ON_OFF_STATE_ON;
 		light_states.onoff_target = MESH_GENERIC_ON_OFF_STATE_ON;
 		LED_state(LED_STATE_ON);
-		/*Write the command to set the Lights OFF here along with saving the data in PS Store */
 		break;
 
 	case MESH_GENERIC_ON_POWER_UP_STATE_RESTORE:
@@ -182,12 +187,10 @@ void light_node_init()
 			if (light_states.onoff_target == MESH_GENERIC_ON_OFF_STATE_OFF)
 			{
 				LED_state(LED_STATE_OFF);
-				/*Write the command to set the Lights OFF here along with saving the data in PS Store */
 			}
 			else
 			{
 				LED_state(LED_STATE_ON);
-				/*Write the command to set the Lights OFF here along with saving the data in PS Store */
 			}
 
 			light_states.onoff_current = light_states.onoff_target;
@@ -200,30 +203,332 @@ void light_node_init()
 			if (light_states.onoff_current == MESH_GENERIC_ON_OFF_STATE_OFF)
 			{
 				LED_state(LED_STATE_OFF);
-				/*Write the command to set the Lights OFF here along with saving the data in PS Store */
 			}
 			else
 			{
 				LED_state(LED_STATE_ON);
-				/*Write the command to set the Lights OFF here along with saving the data in PS Store */
 			}
 		}
 		break;
 	}
 
-
-
 	publish:
 	lightstate_save();
-//	light_states.onoff_target = 5;
-//	printf("Structure values: %d,%d,%d,%d,%d,%d \r\n",light_states.light_onstate, light_states.motion_t, light_states.proximity_t
-//			,light_states.onoff_current, light_states.onoff_target, light_states.onpowerup);
+	models_init();
 
+//	uint8_t x = onoff_update_and_publish(primary_element);
+//	power_onoff_update_and_publish(primary_element);
 
+	init_complete = 1;			//Flag to service interrupts only after initialization is complete
 }
 
 
+// SERVER SIDE RELATED FUNCTIONS
 
+/*
+ * Initializing Different Models Used
+ */
+static void models_init(void)
+{
+  mesh_lib_generic_server_register_handler(MESH_GENERIC_ON_OFF_SERVER_MODEL_ID,
+                                           0,
+                                           onoff_request,
+                                           onoff_change);
+  mesh_lib_generic_server_register_handler(MESH_GENERIC_POWER_ON_OFF_SETUP_SERVER_MODEL_ID,
+                                           0,
+                                           power_onoff_request,
+                                           power_onoff_change);
+//  mesh_lib_generic_server_register_handler(MESH_GENERIC_TRANSITION_TIME_SERVER_MODEL_ID,
+//                                           0,
+//                                           transtime_request,
+//                                           transtime_change);
+
+}
+
+/*
+ * Function to change Server State as requested by the Client
+ */
+static void onoff_request(uint16_t model_id,
+		uint16_t element_index,
+		uint16_t client_addr,
+		uint16_t server_addr,
+		uint16_t appkey_index,
+		const struct mesh_generic_request *request,
+		uint32_t transition_ms,
+		uint16_t delay_ms,
+		uint8_t request_flags)
+{
+	printf("ON/OFF request: requested state=<%s>, transition=%lu, delay=%u\r\n",
+			request->on_off ? "ON" : "OFF", transition_ms, delay_ms);
+
+	if (light_states.onoff_current == request->on_off)
+	{
+		printf("Request for current state received; no op\n");
+	}
+	else
+	{
+		transition_ms = 0;
+		delay_ms = 0;
+		printf("Turning lightbulb <%s>\r\n", request->on_off ? "ON" : "OFF");
+		if (transition_ms == 0 && delay_ms == 0)
+		{ // Immediate change
+			light_states.onoff_current = request->on_off;
+			light_states.onoff_target = request->on_off;
+			if (light_states.onoff_current == MESH_GENERIC_ON_OFF_STATE_OFF) {
+				LED_state(LED_STATE_OFF);
+			}
+			else
+			{
+				LED_state(LED_STATE_ON);
+			}
+		}
+	/*
+		else if (delay_ms > 0)
+		{
+			// a delay has been specified for the light change. Start a soft timer
+			// that will trigger the change after the given delay
+			// Current state remains as is for now
+			light_states.onoff_target = request->on_off;
+			gecko_cmd_hardware_set_soft_timer(TIMER_MS_2_TIMERTICK(delay_ms), TIMER_ID_DELAYED_ONOFF, 1);
+			// store transition parameter for later use
+//			delayed_onoff_trans = transition_ms;
+		}
+
+		else
+		{
+			// no delay but transition time has been set.
+			light_states.onoff_target = request->on_off;
+
+			if (request->on_off == MESH_GENERIC_ON_OFF_STATE_OFF)
+			{
+				LEDS_SetLevel(0, transition_ms);
+			}
+			else
+			{
+				// restore last brightness
+				light_states.lightness_target = lightbulb_state.lightness_last;
+				LEDS_SetLevel(lightbulb_state.lightness_target, transition_ms);
+			}
+			// lightbulb current state will be updated when transition is complete
+			gecko_cmd_hardware_set_soft_timer(TIMER_MS_2_TIMERTICK(transition_ms), TIMER_ID_ONOFF_TRANSITION, 1);
+		}
+		*/
+		lightstate_save();
+	}
+
+	if (request_flags & MESH_REQUEST_FLAG_RESPONSE_REQUIRED)
+	{
+		onoff_response(element_index, client_addr, appkey_index);
+	}
+	else
+	{
+		onoff_update(element_index);
+	}
+}
+
+
+static void onoff_change(uint16_t model_id,
+                         uint16_t element_index,
+                         const struct mesh_generic_state *current,
+                         const struct mesh_generic_state *target,
+                         uint32_t remaining_ms)
+{
+  if (current->on_off.on != light_states.onoff_current) {
+    printf("on-off state changed %u to %u\r\n", light_states.onoff_current, current->on_off.on);
+
+    light_states.onoff_current = current->on_off.on;
+    lightstate_save();
+  } else {
+    printf("dummy onoff change - same state as before\r\n");
+  }
+}
+
+/*
+ * Function to respond to client calls
+ */
+static errorcode_t onoff_response(uint16_t element_index,
+                                  uint16_t client_addr,
+                                  uint16_t appkey_index)
+{
+  struct mesh_generic_state current, target;
+
+  current.kind = mesh_generic_state_on_off;
+  current.on_off.on = light_states.onoff_current;
+
+  target.kind = mesh_generic_state_on_off;
+  target.on_off.on = light_states.onoff_target;
+
+  return mesh_lib_generic_server_response(MESH_GENERIC_ON_OFF_SERVER_MODEL_ID,
+                                          element_index,
+                                          client_addr,
+                                          appkey_index,
+                                          &current,
+                                          &target,
+                                          0,
+                                          0x00);
+}
+
+/**
+ * Updates the onoff data.
+ */
+static errorcode_t onoff_update(uint16_t element_index)
+{
+  struct mesh_generic_state current, target;
+
+  current.kind = mesh_generic_state_on_off;
+  current.on_off.on = light_states.onoff_current;
+
+  target.kind = mesh_generic_state_on_off;
+  target.on_off.on = light_states.onoff_target;
+
+  return mesh_lib_generic_server_update(MESH_GENERIC_ON_OFF_SERVER_MODEL_ID,
+                                        element_index,
+                                        &current,
+                                        &target,
+                                        0);
+}
+
+/**
+ * Updates and publishes the onoff data to the network
+ */
+static errorcode_t onoff_update_and_publish(uint16_t element_index, int retrans)
+{
+	errorcode_t e;
+	const uint32 transtime = 0; /* using zero transition time by default */
+
+	e = onoff_update(element_index);
+
+	struct mesh_generic_request req;
+	req.kind = mesh_generic_request_on_off;
+	req.on_off = light_states.onoff_current ? MESH_GENERIC_ON_OFF_STATE_ON : MESH_GENERIC_ON_OFF_STATE_OFF;
+
+	// increment transaction ID for each request, unless it's a retransmission
+  	if (retrans == 0)
+  	{
+  		trid++;
+  	}
+
+  	if (e == bg_err_success)
+  	{
+  		e = mesh_lib_generic_server_publish(MESH_GENERIC_ON_OFF_SERVER_MODEL_ID,
+  				element_index,
+				mesh_generic_state_on_off);
+  	}
+
+  	if (e)
+  	{
+  		printf("gecko_cmd_mesh_generic_client_publish failed,code %x\r\n", e);
+  	}
+  	else
+  	{
+  		printf("request sent, trid = %u\r\n", trid);
+  	}
+
+    /* keep track of how many requests has been sent */
+    if (request_count > 0)
+    {
+    	request_count--;
+    }
+
+  return e;
+}
+
+
+static errorcode_t power_onoff_response(uint16_t element_index,
+                                        uint16_t client_addr,
+                                        uint16_t appkey_index)
+{
+  struct mesh_generic_state current;
+  current.kind = mesh_generic_state_on_power_up;
+  current.on_power_up.on_power_up = light_states.onpowerup;
+
+  return mesh_lib_generic_server_response(MESH_GENERIC_POWER_ON_OFF_SETUP_SERVER_MODEL_ID,
+                                          element_index,
+                                          client_addr,
+                                          appkey_index,
+                                          &current,
+                                          NULL,
+                                          0,
+                                          0x00);
+}
+
+static errorcode_t power_onoff_update(uint16_t element_index)
+{
+  struct mesh_generic_state current;
+  current.kind = mesh_generic_state_on_power_up;
+  current.on_power_up.on_power_up = light_states.onpowerup;
+
+  return mesh_lib_generic_server_update(MESH_GENERIC_POWER_ON_OFF_SERVER_MODEL_ID,
+                                        element_index,
+                                        &current,
+                                        NULL,
+                                        0);
+}
+
+static errorcode_t power_onoff_update_and_publish(uint16_t element_index)
+{
+  errorcode_t e;
+
+  e = power_onoff_update(element_index);
+  if (e == bg_err_success) {
+    e = mesh_lib_generic_server_publish(MESH_GENERIC_POWER_ON_OFF_SERVER_MODEL_ID,
+                                        element_index,
+                                        mesh_generic_state_on_power_up);
+  }
+
+  return e;
+}
+
+static void power_onoff_request(uint16_t model_id,
+                                uint16_t element_index,
+                                uint16_t client_addr,
+                                uint16_t server_addr,
+                                uint16_t appkey_index,
+                                const struct mesh_generic_request *request,
+                                uint32_t transition_ms,
+                                uint16_t delay_ms,
+                                uint8_t request_flags)
+{
+  printf("ON POWER UP request received; state=<%s>\n",
+         light_states.onpowerup == 0 ? "OFF"
+         : light_states.onpowerup == 1 ? "ON"
+         : "RESTORE");
+
+  if (light_states.onpowerup == request->on_power_up) {
+    printf("Request for current state received; no op\n");
+  } else {
+    printf("Setting onpowerup to <%s>\n",
+           request->on_power_up == 0 ? "OFF"
+           : request->on_power_up == 1 ? "ON"
+           : "RESTORE");
+    light_states.onpowerup = request->on_power_up;
+    lightstate_save();
+  }
+
+  if (request_flags & MESH_REQUEST_FLAG_RESPONSE_REQUIRED) {
+    power_onoff_response(element_index, client_addr, appkey_index);
+  } else {
+    power_onoff_update(element_index);
+  }
+}
+
+
+static void power_onoff_change(uint16_t model_id,
+                               uint16_t element_index,
+                               const struct mesh_generic_state *current,
+                               const struct mesh_generic_state *target,
+                               uint32_t remaining_ms)
+{
+  // TODO
+}
+
+
+// CLIENT SIDE RELATED FUNCTIONS
+
+/**
+ * This function loads the saved states from Persistent Storage and
+ * copies the data in the global variable light_states
+ */
 static int load_ps_data()
 {
 	struct gecko_msg_flash_ps_load_rsp_t* ps_load;
@@ -232,12 +537,13 @@ static int load_ps_data()
 	if (ps_load->result)
 	{
 		memset(&light_states, 0, sizeof(struct light_states));
-		light_states.light_onstate = false;
-		light_states.motion_t = MOTION_T;
-		light_states.proximity_t = PROXIMITY_T;
 		light_states.onoff_current = MESH_GENERIC_ON_OFF_STATE_OFF;
-		light_states.onoff_target = MESH_GENERIC_ON_OFF_STATE_ON;
-		light_states.onpowerup = MESH_GENERIC_ON_POWER_UP_STATE_RESTORE;
+		light_states.onoff_target = MESH_GENERIC_ON_OFF_STATE_OFF;
+		light_states.ps_current = MESH_GENERIC_ON_OFF_STATE_OFF;
+		light_states.ps_target = MESH_GENERIC_ON_OFF_STATE_OFF;
+		light_states.proximity_t = 1000;
+		light_states.transtime = 0;
+		light_states.onpowerup = MESH_GENERIC_ON_POWER_UP_STATE_OFF;
 
 		return 1;
 	}
@@ -246,10 +552,10 @@ static int load_ps_data()
 }
 
 /**
- * this function saves the current light state in Persistent Storage so that
- * the data is preserved over reboots and power cycles. The light state is hold
- * in a global variable lightbulb_state. a PS key with ID 0x4004 is used to store
- * the whole struct.
+ * this function saves the current states of light and parking slots in Persistent Storage so that
+ * the data is preserved over reboots and power cycles. The state are held
+ * in a global variable light_states. a PS key with ID 0x4004 is used to store
+ * the whole structure.
  */
 static int save_ps_data(void)
 {
@@ -265,6 +571,11 @@ static int save_ps_data(void)
   return 0;
 }
 
+/**
+ *  this function is called to initiate factory reset. Factory reset may be initiated
+ *  by keeping one of the WSTK pushbuttons pressed during reboot. Factory reset is also
+ *  performed if it is requested by the provisioner (event gecko_evt_mesh_node_reset_id)
+ */
 void initiate_factory_reset()
 {
 printf ("Initiate Factory Reset\r\n");
@@ -278,7 +589,18 @@ if (conn_handle != 0xFF)
 gecko_cmd_flash_ps_erase_all();
 
 //Give a delay before rebooting to successfully delete all PS data
-gecko_cmd_hardware_set_soft_timer(2 * 32768, SOFT_TIMER_FACTORY_RESET, 1);
+gecko_cmd_hardware_set_soft_timer(TIMER_S_TO_TICKS(2), SOFT_TIMER_FACTORY_RESET, 1);
+}
+
+/**
+ * Get Device Bluetooth Address and display on LCD
+ */
+void disp_device_addr()
+{
+	struct gecko_msg_system_get_bt_address_rsp_t *bt_addr = gecko_cmd_system_get_bt_address();
+	bd_addr *client_address =(bd_addr*)&bt_addr->address;
+	sprintf(string_disp,"%x:%x:%x:%x:%x:%x", client_address->addr[5],client_address->addr[4],client_address->addr[3],client_address->addr[2],client_address->addr[1],client_address->addr[0]);
+	LCD_write(string_disp,LCD_ROW_BTADDR1);
 }
 
 /*
@@ -288,9 +610,12 @@ static uint32_t default_transition_time(void)
 }
 */
 
+/**
+ * Function calls to save and load state values
+ */
 static void lightstate_save(void)
 {
-gecko_cmd_hardware_set_soft_timer(32678 * 3, SOFT_TIMER_LIGHTSTATE_SAVE, 1);
+gecko_cmd_hardware_set_soft_timer(TIMER_S_TO_TICKS(3), SOFT_TIMER_LIGHTSTATE_SAVE, 1);
 }
 
 int main()
@@ -302,6 +627,10 @@ int main()
   // Initialize application
   initApp();
 
+  /**initializing the flags to default Values
+   *@flag1 - To update the state value only once in certain specified time
+   *@flag2 - To  update and publish state value only once in certain specified
+  **/
   flag1 = 1;
   flag2 = 1;
 
@@ -314,16 +643,9 @@ int main()
 //  proximity_config();
   push_buttons_init();
 
-  light_states.light_onstate = true;
-  light_states.motion_t = 5;
-  light_states.proximity_t = 5;
-  light_states.onoff_current = 7;
-  light_states.onoff_target = 7;
-  light_states.onpowerup = 7;
-
-
-  printf("PS to be stored initial Values:%d ,%d, %d, %d, %d, %d\r\n", light_states.light_onstate, light_states.motion_t, light_states.proximity_t
-		  ,light_states.onoff_current, light_states.onoff_target, light_states.onpowerup);
+//  light_states.onoff_current = 7;
+//  light_states.onoff_target = 7;
+//  light_states.onpowerup = 7;
 
 
   RETARGET_SerialInit();
@@ -345,8 +667,21 @@ int main()
   gecko_initCoexHAL();
   gecko_cmd_flash_ps_erase_all();
 
-  while (1) {
 
+
+  gecko_bgapi_class_mesh_node_init();
+  //  gecko_bgapi_class_mesh_prov_init();
+  gecko_bgapi_class_mesh_proxy_init();
+  gecko_bgapi_class_mesh_proxy_server_init();
+  gecko_bgapi_class_mesh_proxy_client_init();
+  gecko_bgapi_class_mesh_generic_client_init();
+  gecko_bgapi_class_mesh_generic_server_init();
+  //gecko_bgapi_class_mesh_vendor_model_init();
+  //gecko_bgapi_class_mesh_test_init();
+  gecko_bgapi_class_mesh_lpn_init();
+
+  while (1)
+  {
 //	  pin_read = GPIO_PinInGet(PROXIMITY_PORT,PROXIMITY_PIN);
 //	  if (!(pin_read))
 //	  {
@@ -362,9 +697,10 @@ int main()
 	  //printf ("\r\n%d\r\n", dist_cm);
 	  struct gecko_cmd_packet *evt = gecko_wait_event();
 	  bool pass = mesh_bgapi_listener(evt);
-	  if (pass) {
-      handle_gecko_event(BGLIB_MSG_ID(evt->header), evt);
-    }
+	  if (pass)
+	  {
+		  handle_gecko_event(BGLIB_MSG_ID(evt->header), evt);
+	  }
   }
 }
 
@@ -372,31 +708,24 @@ static void handle_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 {
 	switch (evt_id) {
 	case gecko_evt_dfu_boot_id:
-		//gecko_cmd_le_gap_set_advertising_timing(0, 1000*adv_interval_ms/625, 1000*adv_interval_ms/625, 0, 0);
 		gecko_cmd_le_gap_set_mode(2, 2);
 		break;
 	case gecko_evt_system_boot_id:
 
-
 		LCD_init("LPN");
 		printf("Boot Id\r\n");
-		//		 check pushbutton state at startup. If either PB0 or PB1 is held down then do factory reset
+		//check pushbutton state at startup. If either PB0 or PB1 is held down then do factory reset
 		if (GPIO_PinInGet(BSP_BUTTON0_PORT, BSP_BUTTON0_PIN) == 0 || GPIO_PinInGet(BSP_BUTTON1_PORT, BSP_BUTTON1_PIN) == 0)
 		{
 			initiate_factory_reset();
 		}
 		else
 		{
+			disp_device_addr();
 
-			//gecko_cmd_hardware_set_soft_timer(32768*10, SOFT_TIMER_1, 1);
-			struct gecko_msg_system_get_bt_address_rsp_t *bt_addr = gecko_cmd_system_get_bt_address();
-			bd_addr *client_address =(bd_addr*)&bt_addr->address;
-			sprintf(string_disp,"%x:%x:%x:%x:%x:%x", client_address->addr[5],client_address->addr[4],client_address->addr[3],client_address->addr[2],client_address->addr[1],client_address->addr[0]);
-			LCD_write(string_disp,LCD_ROW_BTADDR1);
-
-			// Initialize Mesh stack in Node operation mode, wait for initialized event
-			result = gecko_cmd_mesh_node_init_oob(PUBLICKEY, AUTH_METHOD, OUTPUT_ACTION, OUTPUT_SIZE, INPUT_ACTION, INPUT_SIZE,
-					LOCATION_BITMASK)->result;
+			// Initialize Mesh stack in Node operation mode, wait for initialized event with OOB authentication Method
+			result = gecko_cmd_mesh_node_init_oob(PUBLICKEY, AUTH_METHOD, OUTPUT_ACTION,
+												OUTPUT_SIZE, INPUT_ACTION, INPUT_SIZE,LOCATION_BITMASK)->result;
 
 			/*If node initialization not successful*/
 			if (result)
@@ -408,15 +737,9 @@ static void handle_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 		}
 		break;
 
-
 	case gecko_evt_hardware_soft_timer_id:
 		switch (evt->data.evt_hardware_soft_timer.handle)
 		{
-		case SOFT_TIMER_1:
-			printf("Software Timer Implementation Successful\r\n");
-			break;
-
-
 		case SOFT_TIMER_FACTORY_RESET:
 			printf("Factory Reset Successful\r\n");
 			gecko_cmd_system_reset(0);
@@ -440,9 +763,19 @@ static void handle_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 			printf("Saving the latest state values\r\n");
 			save_ps_data();
 			load_ps_data();
-			printf("Structure values: %d,%d,%d,%d,%d,%d\r\n",light_states.light_onstate, light_states.motion_t, light_states.proximity_t
-					,light_states.onoff_current, light_states.onoff_target, light_states.onpowerup);
+			break;
 
+		case SOFT_TIMER_RETRANSMISSION:
+			printf("Retransmitting..\r\n");
+			onoff_update_and_publish(primary_element,1);   // 1 as a parameter indicates this is a retransmission
+			if (request_count == 0)
+			{
+				gecko_cmd_hardware_set_soft_timer(TIMER_S_TO_TICKS(0), SOFT_TIMER_RETRANSMISSION, 0);
+			}
+			else
+			{
+				gecko_cmd_hardware_set_soft_timer(TIMER_S_TO_TICKS(0.05), SOFT_TIMER_RETRANSMISSION, 1);
+			}
 			break;
 
 
@@ -451,11 +784,12 @@ static void handle_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 		}
 		break;
 
-
 		case gecko_evt_mesh_node_initialized_id:
 
 			printf ("Node Initialized\r\n");
 			LCD_write("Node Initialized",LCD_ROW_BTADDR2);
+
+			//Initializing  Generic Server Stack
 			gecko_cmd_mesh_generic_server_init();
 
 			if (evt->data.evt_mesh_node_initialized.provisioned)
@@ -463,16 +797,20 @@ static void handle_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 				printf ("Node provisioned\r\n");
 				printf("address:%x, ivi:%ld\r\n", evt->data.evt_mesh_node_initialized.address, evt->data.evt_mesh_node_initialized.ivi);
 				LCD_write("Node provisoned",LCD_ROW_BTADDR2);
-
+				primary_element = 0;			// Primary ELement Index Hardcoded
 				light_node_init();
-				/*
-    		result = gecko_cmd_mesh_lpn_init()->result;
-    		{
-    			printf ("LPN Node Init Failed %x\r\n", result);
-    			sprintf (string_disp, "LPN Node Init Failed 0x%x", result);
-    			LCD_write(string_disp, LCD_ROW_BTADDR2);
-    		}
-				 */
+
+				/********************************/
+//				i2c_init();
+//				proximity_powerup_config();
+//				proximity_config();
+
+//				//The below 3 lines should be written inside the interrupt routine for Proximity Sensor
+//				request_count = 3;
+//				//For testing Purpose
+//				onoff_update_and_publish(primary_element, 0); 	// 0 indicates this is first transmission
+//				gecko_cmd_hardware_set_soft_timer(TIMER_S_TO_TICKS(0.05), SOFT_TIMER_RETRANSMISSION, 1);
+
 			}
 			else
 			{
@@ -489,7 +827,8 @@ static void handle_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 			printf ("Provisioning Started\r\n");
 			LCD_write("Provisioning Started",LCD_ROW_BTADDR2);
 
-			gecko_cmd_hardware_set_soft_timer(32768 / 4, SOFT_TIMER_PROVISIONING, 0);
+			//In order to Blink LEDS during Provisioning
+			gecko_cmd_hardware_set_soft_timer(TIMER_S_TO_TICKS(0.25), SOFT_TIMER_PROVISIONING, 0);
 
 			break;
 
@@ -505,6 +844,13 @@ static void handle_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 
 		case gecko_evt_mesh_node_model_config_changed_id:
 			printf("model config changed\r\n");
+
+			//The below 3 lines should be written inside the interrupt routine for Proximity Sensor
+			request_count = 3;
+			//For testing Purpose
+			onoff_update_and_publish(primary_element, 0); 	// 0 indicates this is first transmission
+			gecko_cmd_hardware_set_soft_timer(TIMER_S_TO_TICKS(0.05), SOFT_TIMER_RETRANSMISSION, 1);
+
 			break;
 
 		case gecko_evt_mesh_node_key_added_id:
@@ -518,7 +864,6 @@ static void handle_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 					(struct gecko_msg_mesh_node_display_output_oob_evt_t *)&(evt->data);
 
 			break;
-
 
 		case gecko_evt_mesh_node_display_output_oob_id:
 		{
@@ -556,34 +901,55 @@ static void handle_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 			LCD_write("Provisioning Failed",LCD_ROW_BTADDR2);
 
 			/* start a one-shot timer that will trigger soft reset after small delay */
-			gecko_cmd_hardware_set_soft_timer(2 * 32768, SOFT_TIMER_FACTORY_RESET, 1);
+			gecko_cmd_hardware_set_soft_timer(TIMER_S_TO_TICKS(2), SOFT_TIMER_FACTORY_RESET, 1);
 
 			break;
 
 		case gecko_evt_mesh_node_provisioned_id:
 
-			printf ("Provisioning Successful\r\n");
-			LCD_write("Provisioning S",LCD_ROW_BTADDR2);
-			uint32_t ivindex = evt->data.evt_mesh_node_provisioned.iv_index;
+			printf ("Node Provisioned\r\n");
+			LCD_write("Node Provisioned",LCD_ROW_BTADDR2);
+//			uint32_t ivindex = evt->data.evt_mesh_node_provisioned.iv_index;
 			uint16_t unicast_address = evt->data.evt_mesh_node_provisioned.address;
-			//LCD_write("",LCD_ROW_PASSKEY);
-			gecko_cmd_hardware_set_soft_timer(0, SOFT_TIMER_PROVISIONING, 0);
+			printf("Server address : %d ", unicast_address);
+			primary_element = 0;			// Primary ELement Index Hardcoded
+			gecko_cmd_hardware_set_soft_timer(TIMER_S_TO_TICKS(0), SOFT_TIMER_PROVISIONING, 0);
 			LED_state(LED_STATE_OFF);
 			light_node_init();
+			printf("node provisioned, got address=%x\r\n", evt->data.evt_mesh_node_provisioned.address);
+
+			/********************************/
+			i2c_init();
+			proximity_powerup_config();
+			proximity_config();
 			break;
 
+		case gecko_evt_mesh_generic_server_client_request_id:
+			printf("evt gecko_evt_mesh_generic_server_client_request_id\r\n");
+			mesh_lib_generic_server_event_handler(evt);
+			break;
+
+		case gecko_evt_mesh_generic_server_state_changed_id:
+
+			// uncomment following line to get debug prints for each server state changed event
+			//server_state_changed(&(evt->data.evt_mesh_generic_server_state_changed));
+
+			// pass the server state changed event to mesh lib handler that will invoke
+			// the callback functions registered by application
+			mesh_lib_generic_server_event_handler(evt);
+			break;
 
 		case gecko_evt_mesh_lpn_friendship_established_id:
 			printf("friendship established\r\n");
 			printf("Address : %x\r\n",evt->data.evt_mesh_lpn_friendship_established.friend_address);
-			LCD_write("Friendship", LCD_ROW_BTADDR2);
+			LCD_write("Friendship"	, LCD_ROW_BTADDR2);
 			break;
 
 		case gecko_evt_mesh_lpn_friendship_failed_id:
 			printf("friendship failed\r\n");
 			LCD_write("No Friend", LCD_ROW_BTADDR2);
 			// try again in 2 seconds
-			result  = gecko_cmd_hardware_set_soft_timer(32768*2, SOFT_TIMER_FIND_FRIEND, 1)->result;
+			result  = gecko_cmd_hardware_set_soft_timer(TIMER_S_TO_TICKS(2), SOFT_TIMER_FIND_FRIEND, 1)->result;
 			if (result) {
 				printf("timer failure?!  %x\r\n", result);
 			}
@@ -595,7 +961,7 @@ static void handle_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 			if (num_connections == 0)
 			{
 				// try again in 2 seconds
-				result  = gecko_cmd_hardware_set_soft_timer(32768*2, SOFT_TIMER_FIND_FRIEND, 1)->result;
+				result  = gecko_cmd_hardware_set_soft_timer(TIMER_S_TO_TICKS(2), SOFT_TIMER_FIND_FRIEND, 1)->result;
 				if (result)
 				{
 					printf("timer failure?!  %x\r\n", result);
@@ -619,7 +985,6 @@ static void handle_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 //					lpn_init();
 //				}
 //			}
-
 			break;
 
 		case gecko_evt_mesh_node_reset_id:
@@ -627,15 +992,21 @@ static void handle_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 			initiate_factory_reset();
 			break;
 
-
-
 		case gecko_evt_system_external_signal_id:
 
-			if (evt->data.evt_system_external_signal.extsignals & MOTION_EVENT)
+			if (init_complete == 1 && (evt->data.evt_system_external_signal.extsignals & MOTION_EVENT))
 			{
 				CORE_ATOMIC_IRQ_DISABLE();
 				EXT_EVENT &= ~MOTION_EVENT;
 				CORE_ATOMIC_IRQ_ENABLE();
+
+				/*LPN poll can be skipped (DOES AUTOMATICALLY)*/
+				result = gecko_cmd_mesh_lpn_poll()->result;
+				if (result)
+				{
+				printf("lpn polling failed : 0x%x\r\n", result);
+				}
+
 				if (flag1==1)
 				{
 				GPIO_PinOutToggle(LED0_PORT,LED0_PIN);
@@ -649,22 +1020,33 @@ static void handle_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 
 				printf("\r\nMOTON DETECTED\r\n");
 				printf("TIMER STARTED");
-				/* Configure and Enable GPIO Interrupt For MOTION SENSOR*/
+				/**Configure and Enable GPIO Interrupt For MOTION SENSOR
+				**/
 				GPIO_IntConfig(MOTION_PORT,MOTION_PIN,RISING_EDGE,FALLING_EDGE,INTERRUPT_ENABLE);
 
 			}
 
-			if (evt->data.evt_system_external_signal.extsignals & PROXIMITY_EVENT)
+			if (init_complete == 1 && (evt->data.evt_system_external_signal.extsignals & PROXIMITY_EVENT))
 			{
 				CORE_ATOMIC_IRQ_DISABLE();
 				EXT_EVENT &= ~PROXIMITY_EVENT;
 				CORE_ATOMIC_IRQ_ENABLE();
+
+				/*LPN poll can be skipped (DOES AUTOMATICALLY)*/
+//				result = gecko_cmd_mesh_lpn_poll()->result;
+//				if (result)
+//				{
+//					printf("lpn polling failed : 0x%x\r\n", result);
+//				}
+
 				//if (flag2==1)
 				//{
 					ecode = proximity_takemeasurement();
 					dist_cm = getdistance();
 					GPIO_PinOutToggle(LED0_PORT,LED0_PIN);
 					GPIO_PinOutToggle(LED1_PORT,LED1_PIN);
+
+
 //					flag2 = 0;
 				//}
 
@@ -675,7 +1057,8 @@ static void handle_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 				printf("\r\noOBJECT DETECTED\r\n");
 				//printf("\r\n%d\r\n", dist_cm);
 
-				/* Configure and Enable GPIO Interrupt For MOTION SENSOR*/
+				/** Configure and Enable GPIO Interrupt For MOTION SENSOR
+				**/
 				GPIO_IntConfig(PROXIMITY_PORT,PROXIMITY_PIN,RISING_EDGE,FALLING_EDGE,INTERRUPT_ENABLE);
 
 			}

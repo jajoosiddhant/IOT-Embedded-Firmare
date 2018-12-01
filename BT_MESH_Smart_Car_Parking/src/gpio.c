@@ -9,29 +9,34 @@
 #include "letimer.h"
 
 
+/*
+ * Enabling GPIO Clock
+ */
 void gpio_cmu_init()
 {
-	// CLOCK Enable for CLock tree
 	CMU_ClockEnable(cmuClock_LFA, true);
 
 	CMU_ClockEnable(cmuClock_GPIO,true);
 }
 
+/*
+ * Configure pushbuttons PB0 and PB1 as inputs, with pull-ups enabled
+ */
 void push_buttons_init(void)
 {
-	// configure pushbutton PB0 and PB1 as inputs, with pull-up enabled
 	GPIO_PinModeSet(BSP_BUTTON0_PORT, BSP_BUTTON0_PIN, gpioModeInputPull, 1);
 	GPIO_PinModeSet(BSP_BUTTON1_PORT, BSP_BUTTON1_PIN, gpioModeInputPull, 1);
 }
 
+/*
+ * Initializing and Configuring GPIO pins and its corresponding Interrupts
+ */
 void gpio_irq_init()
 {
 	GPIO_PinModeSet(MOTION_PORT, MOTION_PIN, gpioModeInputPull, MOTION_DEFAULT);
-	/*Clear all the Gpio interrupts Flags*/
-
 	GPIO_PinModeSet(PROXIMITY_PORT, PROXIMITY_PIN, gpioModeInputPull, PROXIMITY_DEFAULT);
-	/*Clear all the Gpio interrupts Flags*/
 
+	/*Clear all the Gpio interrupts Flags*/
 	GPIO->IFC = 0x00000000;
 
 	/* Configure and Enable GPIO Interrupt For MOTION SENSOR*/
@@ -48,6 +53,9 @@ void gpio_irq_init()
 
 }
 
+/*
+ * Initializing LEDS
+ */
 void led_init()
 {
 	GPIO_DriveStrengthSet(LED1_PORT, gpioDriveStrengthStrongAlternateStrong);
@@ -62,42 +70,42 @@ void led_init()
 void GPIO_ODD_IRQHandler(void)
 {
 	/*Disable all interrupts*/
-		CORE_ATOMIC_IRQ_DISABLE();
+	CORE_ATOMIC_IRQ_DISABLE();
 
-		/*Clear all Interrupt flags*/
-		GPIO->IFC = 0x00000000;
+	/*Clear all Interrupt flags*/
+	GPIO->IFC = 0x00000000;
 
-		/*Update external event Scheduler Values*/
-		EXT_EVENT |= MOTION_EVENT;
+	/*Update external event Scheduler Values*/
+	EXT_EVENT |= MOTION_EVENT;
 
-		gecko_external_signal(EXT_EVENT);
+	gecko_external_signal(EXT_EVENT);
 
-		/*Disable all Interrupts*/
-		GPIO->IEN = 0x00000000;
+	/*Disable all Interrupts*/
+	GPIO->IEN = 0x00000000;
 
-		/*Disable all interrupts*/
-		CORE_ATOMIC_IRQ_ENABLE();
+	/*Disable all interrupts*/
+	CORE_ATOMIC_IRQ_ENABLE();
 }
 
 
 void GPIO_EVEN_IRQHandler(void)
 {
 	/*Disable all interrupts*/
-		CORE_ATOMIC_IRQ_DISABLE();
+	CORE_ATOMIC_IRQ_DISABLE();
 
-		/*Clear all Interrupt flags*/
-		GPIO->IFC = 0x00000000;
+	/*Clear all Interrupt flags*/
+	GPIO->IFC = 0x00000000;
 
-		/*Update external event Scheduler Values*/
-		EXT_EVENT |= PROXIMITY_EVENT;
+	/*Update external event Scheduler Values*/
+	EXT_EVENT |= PROXIMITY_EVENT;
 
-		gecko_external_signal(EXT_EVENT);
+	gecko_external_signal(EXT_EVENT);
 
-		/*Disable all Interrupts*/
-		GPIO->IEN = 0x00000000;
+	/*Disable all Interrupts*/
+	GPIO->IEN = 0x00000000;
 
-		/*Disable all interrupts*/
-		CORE_ATOMIC_IRQ_ENABLE();
+	/*Disable all interrupts*/
+	CORE_ATOMIC_IRQ_ENABLE();
 }
 
 /**

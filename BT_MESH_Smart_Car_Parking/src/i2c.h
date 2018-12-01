@@ -12,6 +12,9 @@
 //#include "native_gecko.h"
 #include "em_i2c.h"
 
+/*
+ * Macros for Register Locations
+ */
 #define ICSR 0x00
 #define INTERRUPTS 0x02
 #define COMMAND 0x04

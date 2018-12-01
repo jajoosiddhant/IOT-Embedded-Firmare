@@ -8,6 +8,9 @@
 #include "i2c.h"
 #include "gpio.h"
 
+/*
+ * Configure and Initialize I2C
+ */
 void i2c_init(void)
 {
 	//CLOCK Enable For I2C
@@ -51,11 +54,8 @@ void i2c_init(void)
 		I2C0->CMD = I2C_CMD_ABORT;
 	}
 
-
 	//Clear all Interrupts
 	I2C0->IFC= 0x00000000;
-
-
 }
 
 
@@ -70,6 +70,9 @@ void i2c_disable (void)
 	GPIO_PinOutClear( SCLPORT , SCLPIN );
 }
 
+/*
+ * Function to read 1 byte of data
+ */
 uint8_t read8 (uint8_t address)
 {
 
@@ -108,6 +111,9 @@ uint8_t read8 (uint8_t address)
 	return (temp);
 }
 
+/*
+ * Function to read 2 byte of data
+ */
 uint16_t read16 (uint8_t address)
 {
 
@@ -147,6 +153,9 @@ uint16_t read16 (uint8_t address)
 	return (finaltemp);
 }
 
+/*
+ * Function to write 1 byte of data
+ */
 void write8 (uint8_t address , uint8_t data)
 {
 
@@ -173,7 +182,9 @@ void write8 (uint8_t address , uint8_t data)
 	I2C0->CMD = I2C_CMD_STOP;
 }
 
-
+/*
+ * Function to write 2 byte of data
+ */
 void write16 (uint8_t address , uint16_t data)
 {
 	//Initialize the TX Buffer
@@ -204,7 +215,9 @@ void write16 (uint8_t address , uint16_t data)
 	I2C0->CMD = I2C_CMD_STOP;
 }
 
-
+/*
+ * Configure and Initialize Proximity Sensor at Powerup
+ */
 void proximity_powerup_config()
 {
 		uint8_t setting = read8(ICSR);
@@ -239,7 +252,9 @@ void proximity_powerup_config()
 		//Whew! We made it through power on configuration
 }
 
-
+/*
+ * Function to initialize sensor to correct mode
+ */
 void proximity_config (void)
 {
 
@@ -267,7 +282,9 @@ void proximity_config (void)
 
 }
 
-
+/*
+ * Function to take measurements
+ */
 uint8_t proximity_takemeasurement(void)
 {
   if (gotomeasurementmode() == false) return (CODE_FAILED_TIMEOUT); //Error - Timeout
@@ -365,7 +382,9 @@ bool gotomeasurementmode(void)
 	}
 }
 
-
+/*
+ * Returns the distance
+ */
 uint16_t getdistance()
 {
   return (distance);

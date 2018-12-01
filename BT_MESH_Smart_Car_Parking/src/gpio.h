@@ -15,7 +15,9 @@
 #include "native_gecko.h"
 #include "em_core.h"
 
-//Defining SDA and SCL lines
+/*
+ * Defining SDA and SCL lines
+ */
 #define SDAPORT 			gpioPortC
 #define SDAPIN				(11)
 #define SCLPORT 			gpioPortC
@@ -23,26 +25,32 @@
 #define SENSORPORT 			gpioPortD
 #define SENSORPIN			(15)
 
+/*
+ * Defininf LEDS,SENSOR port and pins
+ */
 #define LED0_PORT			gpioPortF
 #define LED0_PIN			(4)
 #define LED0_DEFAULT		false
-
 #define LED1_PORT			gpioPortF
 #define LED1_PIN			(5)
 #define LED1_DEFAULT		false
-
 #define MOTION_PORT			gpioPortA
 #define MOTION_PIN			(3)
 #define MOTION_DEFAULT		true
-
 #define PROXIMITY_PORT		gpioPortD
 #define PROXIMITY_PIN		(10)
 #define PROXIMITY_DEFAULT	true
 
+/*
+ * Parameters for configuring gpio interrupts for sensors
+ */
 #define RISING_EDGE			(0)
 #define FALLING_EDGE 		(1)
 #define INTERRUPT_ENABLE	(1)
 
+/*
+ * Scheduler Event Flags
+ */
 #define MOTION_EVENT        (0x02)
 #define PROXIMITY_EVENT		(0X04)
 

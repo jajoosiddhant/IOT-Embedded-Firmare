@@ -7,6 +7,9 @@
 
 #include "letimer.h"
 
+/*
+ * Enable LETIMER Clocks
+ */
 void letimer_cmu_init()
 {
 	//Enabling Oscillator for designated Energy Modes
@@ -25,6 +28,9 @@ void letimer_cmu_init()
 	CMU_ClockEnable (cmuClock_LETIMER0, true);
 }
 
+/*
+ * Initialize and Configure LETIMER
+ */
 void letimer_init(void)
 {
 	const LETIMER_Init_TypeDef regs =
@@ -66,22 +72,28 @@ void letimer_init(void)
 
 }
 
+/*
+ * Function to start LETIMER counting
+ */
 void letimer_start(void)
 {
 	//Enable The peripheral LETIMER0
 	LETIMER_Enable(LETIMER0, true);
 
-	// Start the timer
 	LETIMER0->CMD=LETIMER_CMD_START;
 }
 
+/*
+ * Function to stop LETIMER counting
+ */
 void letimer_stop(void)
 {
-	// Start the timer
 	LETIMER0->CMD=LETIMER_CMD_STOP;
 }
 
-
+/*
+ * Function to prescale the Clock Frequency
+ */
 void prescale(void)
 {
 	CMU_ClockDivSet(cmuClock_LETIMER0,8);
