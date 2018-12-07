@@ -70,7 +70,8 @@ uint16_t finaltemp;
 uint8_t errorCode;
 uint8_t ecode;
 uint16_t distance;
-uint16_t dist_cm;
+//uint16_t dist_cm;
+//uint16_t confidence;
 uint16_t confidenceRegister;
 uint8_t validPixels;
 uint16_t confidenceValue;
@@ -92,5 +93,6 @@ bool gotoonmode(void);
 bool gotomeasurementmode(void);
 uint16_t getdistance(void);
 uint8_t proximity_takemeasurement(void);
+uint16_t getconfidencevalue();
 
 #endif /* I2C_H_ */

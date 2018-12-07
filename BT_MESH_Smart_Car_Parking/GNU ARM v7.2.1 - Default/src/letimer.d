@@ -1,4 +1,5 @@
-src/letimer.o: ../src/letimer.c ../src/letimer.h \
+src/letimer.o: ../src/letimer.c \
+ C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking/src/letimer.h \
  C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\platform\emlib\inc/em_letimer.h \
  C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\platform\Device\SiliconLabs\EFR32BG13P\Include/em_device.h \
  C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\platform\Device\SiliconLabs\EFR32BG13P\Include/efr32bg13p632f512gm48.h \
@@ -71,9 +72,10 @@ src/letimer.o: ../src/letimer.c ../src/letimer.h \
  C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\protocol\bluetooth\bt_mesh\inc\common/gecko_configuration.h \
  C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\protocol\bluetooth\bt_mesh\inc\common/bg_gattdb_def.h \
  C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\protocol\bluetooth\bt_mesh\inc\common/bg_types.h \
- C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\protocol\bluetooth\bt_mesh\inc\common/bg_errorcodes.h
+ C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\protocol\bluetooth\bt_mesh\inc\common/bg_errorcodes.h \
+ C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking/src/gpio.h
 
-../src/letimer.h:
+C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking/src/letimer.h:
 
 C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\platform\emlib\inc/em_letimer.h:
 
@@ -220,3 +222,5 @@ C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\protocol\
 C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\protocol\bluetooth\bt_mesh\inc\common/bg_types.h:
 
 C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking\protocol\bluetooth\bt_mesh\inc\common/bg_errorcodes.h:
+
+C:\Users\user1\SimplicityStudio\v4_workspace\BT_MESH_Smart_Car_Parking/src/gpio.h:

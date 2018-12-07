@@ -42,7 +42,7 @@ void gpio_irq_init()
 	/* Configure and Enable GPIO Interrupt For MOTION SENSOR*/
 	GPIO_IntConfig(MOTION_PORT,MOTION_PIN,RISING_EDGE,FALLING_EDGE,INTERRUPT_ENABLE);
 
-	/* Configure and Enable GPIO Interrupt For MOTION SENSOR*/
+	/* Configure and Enable GPIO Interrupt For PROXIMITY SENSOR*/
 	GPIO_IntConfig(PROXIMITY_PORT,PROXIMITY_PIN,RISING_EDGE,FALLING_EDGE,INTERRUPT_ENABLE);
 
 	/*Enable NVIC interrupt*/
@@ -72,16 +72,25 @@ void GPIO_ODD_IRQHandler(void)
 	/*Disable all interrupts*/
 	CORE_ATOMIC_IRQ_DISABLE();
 
-	/*Clear all Interrupt flags*/
-	GPIO->IFC = 0x00000000;
+	int flag;
+
+	/*Clear Interrupt flags*/
+	flag = GPIO_IntGet();
+	flag = flag & (MOTION_INT_REG_VALUE);
+	GPIO_IntClear(flag);
 
 	/*Update external event Scheduler Values*/
 	EXT_EVENT |= MOTION_EVENT;
 
 	gecko_external_signal(EXT_EVENT);
 
+	GPIO_IntDisable(MOTION_INT_REG_VALUE);
+
+//	GPIO->IEN = 0x00000000;
+	/* Configure and Enable GPIO Interrupt For PROXIMITY SENSOR*/
+//	GPIO_IntConfig(PROXIMITY_PORT,PROXIMITY_PIN,RISING_EDGE,FALLING_EDGE,INTERRUPT_ENABLE);
 	/*Disable all Interrupts*/
-	GPIO->IEN = 0x00000000;
+//	GPIO->IEN = 0x00000400;
 
 	/*Disable all interrupts*/
 	CORE_ATOMIC_IRQ_ENABLE();
@@ -92,17 +101,25 @@ void GPIO_EVEN_IRQHandler(void)
 {
 	/*Disable all interrupts*/
 	CORE_ATOMIC_IRQ_DISABLE();
+	int flag;
 
 	/*Clear all Interrupt flags*/
-	GPIO->IFC = 0x00000000;
+	flag = GPIO_IntGet();
+	flag = flag & (PROXIMITY_INT_REG_VALUE);
+	GPIO_IntClear(flag);
 
 	/*Update external event Scheduler Values*/
 	EXT_EVENT |= PROXIMITY_EVENT;
 
 	gecko_external_signal(EXT_EVENT);
 
+	GPIO_IntDisable(PROXIMITY_INT_REG_VALUE);
+//	GPIO->IEN = 0x00000000;
+	/* Configure and Enable GPIO Interrupt For MOTION SENSOR*/
+//	GPIO_IntConfig(MOTION_PORT,MOTION_PIN,RISING_EDGE,FALLING_EDGE,INTERRUPT_ENABLE);
+
 	/*Disable all Interrupts*/
-	GPIO->IEN = 0x00000000;
+//	GPIO->IEN = 0x00000800;
 
 	/*Disable all interrupts*/
 	CORE_ATOMIC_IRQ_ENABLE();
@@ -133,6 +150,26 @@ void LED_state(int state)
 	case LED_STATE_PROV:
 		GPIO_PinOutToggle(LED0_PORT, LED0_PIN);
 		GPIO_PinOutToggle(LED1_PORT, LED1_PIN);
+		break;
+
+	case LED0_STATE_ON:
+		GPIO_PinOutSet(LED0_PORT, LED0_PIN);
+		break;
+
+	case LED0_STATE_OFF:
+		GPIO_PinOutClear(LED0_PORT, LED0_PIN);
+		break;
+
+	case LED1_STATE_ON:
+		GPIO_PinOutSet(LED1_PORT, LED1_PIN);
+		break;
+
+	case LED1_STATE_OFF:
+		GPIO_PinOutClear(LED1_PORT, LED1_PIN);
+		break;
+
+	case LED0_STATE_PARKING_IN_PROCESS:
+		GPIO_PinOutToggle(LED0_PORT, LED0_PIN);
 		break;
 
 	default:

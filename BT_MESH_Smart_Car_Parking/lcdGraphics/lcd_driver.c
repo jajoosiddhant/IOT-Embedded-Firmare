@@ -24,7 +24,7 @@ void LCD_init(char *header)
 
   graphInit(header);
 
-  LCD_write("initializing", LCD_ROW_CONNECTION);
+ // LCD_write("initializing", LCD_ROW_CONNECTION);
 }
 
 /**

@@ -19,9 +19,11 @@
 #define	LOCATION_BITMASK 	(0x01)
 
 #define PSKEY				(0x4004)
-#define MOTION_T			(100)		//Random Value for Testing
-#define PROXIMITY_T			(900)		//Random Value for Testing
-
+#define PROXIMITY_T			(180)		//Maximum Threshold Value to detect an object.
+#define PROXIMITY_MIN_CON	(50)		//Minimum Confidence Value representing how confident the sensor is about its reported distance.
+#define MIN_ALARM_DIST		(15)
+#define WAIT_TIME_LIGHTOFF	(120)		//in Seconds
+#define MOTION_INT_RENABLE	(30)		//in Seconds
 /** Timer Frequency used. */
 #define TIMER_CLK_FREQ 		((uint32)32768)
 
@@ -33,6 +35,10 @@
 #define SOFT_TIMER_FIND_FRIEND		(53)
 #define SOFT_TIMER_LIGHTSTATE_SAVE	(54)
 #define SOFT_TIMER_RETRANSMISSION	(55)
+#define SOFT_TIMER_PROXIMITY_INTERRUPT_ENABLE	(56)
+#define SOFT_TIMER_MOTION_INTERRUPT_ENABLE	(57)
+#define SOFT_TIMER_MOTION_LIGHT_OFF	(58)
+#define SOFT_TIMER_PARKING_IN_PROCESS	(59)
 
 static PACKSTRUCT(struct light_states
 {
@@ -46,6 +52,8 @@ static PACKSTRUCT(struct light_states
 
 	//Threshold for Proximity Sensor
 	uint16_t proximity_t;
+	uint16_t proximity_min_con;
+	uint16_t min_alarm_dist;
 
 	// Transition Time Server state
 	uint8_t transtime;
@@ -71,6 +79,7 @@ static uint16_t primary_element = 0xFFFF;
 static uint8 trid = 0;        /* transaction identifier */
 static uint8_t init_complete = 0;
 static uint8_t request_count;
+static uint8_t empty_count;
 
 void initiate_factory_reset(void);
 void push_buttons_init(void);
@@ -81,6 +90,8 @@ static int load_ps_data(void);
 static int save_ps_data(void);
 static uint32_t default_transition_time(void);
 static void lightstate_save(void);
+static void send_pslot_state(void);
+static void send_light_state(void);
 
 static void onoff_request(uint16_t model_id,
 		uint16_t element_index,

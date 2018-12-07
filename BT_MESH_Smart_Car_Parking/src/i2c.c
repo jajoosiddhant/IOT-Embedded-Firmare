@@ -390,3 +390,10 @@ uint16_t getdistance()
   return (distance);
 }
 
+
+//Returns the qualitative value representing how confident the sensor is about its reported distance
+uint16_t getconfidencevalue()
+{
+  return (confidenceValue);
+}
+

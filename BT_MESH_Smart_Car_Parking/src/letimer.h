@@ -17,7 +17,7 @@
 
 
 #define LETIMER_EVENT		(0x08)	//Scheduler Event Flag for LETIMER
-#define wait_timeperiod		(120)	//seconds
+#define wait_timeperiod		(2)	//seconds
 
 volatile uint32_t EXT_EVENT;
 int totalticks;
