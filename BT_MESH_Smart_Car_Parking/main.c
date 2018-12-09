@@ -99,6 +99,7 @@ uint8_t boot_to_dfu = 0;
 
 const gecko_configuration_t config =
 {
+  .sleep.flags = SLEEP_FLAGS_DEEP_SLEEP_ENABLE,
   .bluetooth.max_connections = MAX_CONNECTIONS,
   .bluetooth.max_advertisers = MAX_ADVERTISERS,
   .bluetooth.heap = bluetooth_stack_heap,
@@ -138,7 +139,7 @@ void light_node_init()
 		printf("LPN init failed 0x%x\r\n", result);
 	}
 
-	 result = gecko_cmd_mesh_lpn_configure(2, 5 * 1000)->result;
+	 result = gecko_cmd_mesh_lpn_configure(2, 2 * 1000)->result;
 	  if (result)
 	  {
 	    printf("LPN conf failed (0x%x)\r\n", result);
@@ -179,11 +180,10 @@ void light_node_init()
 
 	case MESH_GENERIC_ON_POWER_UP_STATE_RESTORE:
 		printf("On power up state is RESTORE\r\n");
-		LED_state(LED_STATE_RESTORE);
+//		LED_state(LED_STATE_RESTORE);
 		if (light_states.onoff_current != light_states.onoff_target)
 		{
-//			uint32_t transition_ms = default_transition_time();
-			printf("CURRENT != TARGET\r\n");
+			printf("CURRENT	LIGHT STATE != TARGET LIGHT STATE\r\n");
 			if (light_states.onoff_target == MESH_GENERIC_ON_OFF_STATE_OFF)
 			{
 				LED_state(LED1_STATE_OFF);
@@ -201,7 +201,7 @@ void light_node_init()
 		else
 		{
 			printf("Keeping loaded state\r\n");
-			printf("CURRENT == TARGET\r\n");
+			printf("CURRENT LIGHT STATE == TARGET LIGHT STATE\r\n");
 			if (light_states.onoff_current == MESH_GENERIC_ON_OFF_STATE_OFF)
 			{
 				LED_state(LED1_STATE_OFF);
@@ -213,6 +213,35 @@ void light_node_init()
 				LCD_write("LIGHT -> 'ON'",LCD_ROW_CLIENTADDR);
 			}
 		}
+
+		if (light_states.ps_current != light_states.ps_target)
+		{
+			printf("CURRENT PS STATE != TARGET PS STATE\r\n");
+			if (light_states.ps_target == MESH_GENERIC_ON_OFF_STATE_OFF)
+			{
+				LCD_write("SLOT EMPTY",LCD_ROW_CONNECTION);
+			}
+			else
+			{
+				LCD_write("SLOT OCCUPIED",LCD_ROW_CONNECTION);
+			}
+
+			light_states.ps_current = light_states.ps_target;
+		}
+		else
+		{
+			printf("Keeping loaded state\r\n");
+			printf("CURRENT PS STATE == TARGET PS STATE\r\n");
+			if (light_states.ps_current == MESH_GENERIC_ON_OFF_STATE_OFF)
+			{
+				LCD_write("SLOT EMPTY",LCD_ROW_CONNECTION);
+			}
+			else
+			{
+				LCD_write("SLOT OCCUPIED",LCD_ROW_CONNECTION);
+			}
+		}
+
 		break;
 	}
 
@@ -238,15 +267,6 @@ static void models_init(void)
                                            0,
                                            onoff_request,
                                            onoff_change);
-  mesh_lib_generic_server_register_handler(MESH_GENERIC_POWER_ON_OFF_SETUP_SERVER_MODEL_ID,
-                                           0,
-                                           power_onoff_request,
-                                           power_onoff_change);
-//  mesh_lib_generic_server_register_handler(MESH_GENERIC_TRANSITION_TIME_SERVER_MODEL_ID,
-//                                           0,
-//                                           transtime_request,
-//                                           transtime_change);
-
 }
 
 /*
@@ -262,75 +282,46 @@ static void onoff_request(uint16_t model_id,
 		uint16_t delay_ms,
 		uint8_t request_flags)
 {
-	printf("ON/OFF request: requested state=<%s>, transition=%lu, delay=%u\r\n",
-			request->on_off ? "ON" : "OFF", transition_ms, delay_ms);
+	printf("Client Address : %d\r\n", client_addr);
+	printf("Server Address : %d\r\n", server_addr);
+	printf("relay value : %d\r\n", request_flags);
+//	if (request_flags & MESH_RESPONSE_FLAG_NONRELAYED )
+//	{
+//		printf("Message Relayed\r\n");
+//	}
+//	if ( client_addr == friend_address )
+//	{
+		printf("ON/OFF request: requested state=<%s>, transition=%lu, delay=%u\r\n",
+				request->on_off ? "ON" : "OFF", transition_ms, delay_ms);
 
-	if (light_states.onoff_current == request->on_off)
-	{
-		printf("Request for current state received; no op\n");
-	}
-	else
-	{
-//		transition_ms = 0;
-//		delay_ms = 0;
 		printf("Turning lightbulb <%s>\r\n", request->on_off ? "ON" : "OFF");
 		if (transition_ms == 0 && delay_ms == 0)
 		{ // Immediate change
-			light_states.onoff_current = request->on_off;
 			light_states.onoff_target = request->on_off;
-			if (light_states.onoff_current == MESH_GENERIC_ON_OFF_STATE_OFF)
+			if (light_states.onoff_target == MESH_GENERIC_ON_OFF_STATE_OFF)
 			{
 				LED_state(LED1_STATE_OFF);
+				gecko_cmd_hardware_set_soft_timer(TIMER_S_TO_TICKS(delay_ms/1000), SOFT_TIMER_LED0_OFF_DELAY, 1);
 				LCD_write("LIGHT -> 'OFF'",LCD_ROW_CLIENTADDR);
 			}
 			else
 			{
 				LED_state(LED1_STATE_ON);
+				gecko_cmd_hardware_set_soft_timer(TIMER_S_TO_TICKS(delay_ms/1000), SOFT_TIMER_LED0_ON_DELAY, 1);
 				LCD_write("LIGHT -> 'ON'",LCD_ROW_CLIENTADDR);
 			}
 		}
-	/*
-		else if (delay_ms > 0)
-		{
-			// a delay has been specified for the light change. Start a soft timer
-			// that will trigger the change after the given delay
-			// Current state remains as is for now
-			light_states.onoff_target = request->on_off;
-			gecko_cmd_hardware_set_soft_timer(TIMER_MS_2_TIMERTICK(delay_ms), TIMER_ID_DELAYED_ONOFF, 1);
-			// store transition parameter for later use
-//			delayed_onoff_trans = transition_ms;
-		}
+		lightstate_save();
 
+		if (request_flags & MESH_REQUEST_FLAG_RESPONSE_REQUIRED)
+		{
+			onoff_response(element_index, client_addr, appkey_index);
+		}
 		else
 		{
-			// no delay but transition time has been set.
-			light_states.onoff_target = request->on_off;
-
-			if (request->on_off == MESH_GENERIC_ON_OFF_STATE_OFF)
-			{
-				LEDS_SetLevel(0, transition_ms);
-			}
-			else
-			{
-				// restore last brightness
-				light_states.lightness_target = lightbulb_state.lightness_last;
-				LEDS_SetLevel(lightbulb_state.lightness_target, transition_ms);
-			}
-			// lightbulb current state will be updated when transition is complete
-			gecko_cmd_hardware_set_soft_timer(TIMER_MS_2_TIMERTICK(transition_ms), TIMER_ID_ONOFF_TRANSITION, 1);
+			onoff_update(element_index);
 		}
-		*/
-		lightstate_save();
-	}
-
-	if (request_flags & MESH_REQUEST_FLAG_RESPONSE_REQUIRED)
-	{
-		onoff_response(element_index, client_addr, appkey_index);
-	}
-	else
-	{
-		onoff_update(element_index);
-	}
+//	}
 }
 
 
@@ -340,14 +331,17 @@ static void onoff_change(uint16_t model_id,
                          const struct mesh_generic_state *target,
                          uint32_t remaining_ms)
 {
-  if (current->on_off.on != light_states.onoff_current) {
-    printf("on-off state changed %u to %u\r\n", light_states.onoff_current, current->on_off.on);
+	if (light_states.onoff_target!= light_states.onoff_current)
+	{
+		printf("on-off state changed %u to %u\r\n", light_states.onoff_current, light_states.onoff_target);
 
-    light_states.onoff_current = current->on_off.on;
-    lightstate_save();
-  } else {
-    printf("dummy onoff change - same state as before\r\n");
-  }
+		light_states.onoff_current = light_states.onoff_target;
+		lightstate_save();
+	}
+	else
+	{
+		printf("onoff change - same state as before\r\n");
+	}
 }
 
 /*
@@ -357,13 +351,14 @@ static errorcode_t onoff_response(uint16_t element_index,
                                   uint16_t client_addr,
                                   uint16_t appkey_index)
 {
+	printf("On off response\r\n");
   struct mesh_generic_state current, target;
 
   current.kind = mesh_generic_state_on_off;
-  current.on_off.on = light_states.onoff_current;
+  current.on_off.on = light_states.ps_current;
 
   target.kind = mesh_generic_state_on_off;
-  target.on_off.on = light_states.onoff_target;
+  target.on_off.on = light_states.ps_target;
 
   return mesh_lib_generic_server_response(MESH_GENERIC_ON_OFF_SERVER_MODEL_ID,
                                           element_index,
@@ -383,10 +378,10 @@ static errorcode_t onoff_update(uint16_t element_index)
   struct mesh_generic_state current, target;
 
   current.kind = mesh_generic_state_on_off;
-  current.on_off.on = light_states.onoff_current;
+  current.on_off.on = light_states.ps_current;
 
   target.kind = mesh_generic_state_on_off;
-  target.on_off.on = light_states.onoff_target;
+  target.on_off.on = light_states.ps_target;
 
   return mesh_lib_generic_server_update(MESH_GENERIC_ON_OFF_SERVER_MODEL_ID,
                                         element_index,
@@ -401,13 +396,13 @@ static errorcode_t onoff_update(uint16_t element_index)
 static errorcode_t onoff_update_and_publish(uint16_t element_index, int retrans)
 {
 	errorcode_t e;
-	const uint32 transtime = 0; /* using zero transition time by default */
+//	const uint32 transtime = 0; /* using zero transition time by default */
 
 	e = onoff_update(element_index);
 
 	struct mesh_generic_request req;
 	req.kind = mesh_generic_request_on_off;
-	req.on_off = light_states.onoff_current ? MESH_GENERIC_ON_OFF_STATE_ON : MESH_GENERIC_ON_OFF_STATE_OFF;
+	req.on_off = light_states.ps_current ? MESH_GENERIC_ON_OFF_STATE_ON : MESH_GENERIC_ON_OFF_STATE_OFF;
 
 	// increment transaction ID for each request, unless it's a retransmission
   	if (retrans == 0)
@@ -424,7 +419,7 @@ static errorcode_t onoff_update_and_publish(uint16_t element_index, int retrans)
 
   	if (e)
   	{
-  		printf("gecko_cmd_mesh_generic_client_publish failed,code %x\r\n", e);
+  		printf("gecko_cmd_mesh_generic_server_publish failed,code %x\r\n", e);
   	}
   	else
   	{
@@ -441,94 +436,6 @@ static errorcode_t onoff_update_and_publish(uint16_t element_index, int retrans)
 }
 
 
-static errorcode_t power_onoff_response(uint16_t element_index,
-                                        uint16_t client_addr,
-                                        uint16_t appkey_index)
-{
-  struct mesh_generic_state current;
-  current.kind = mesh_generic_state_on_power_up;
-  current.on_power_up.on_power_up = light_states.onpowerup;
-
-  return mesh_lib_generic_server_response(MESH_GENERIC_POWER_ON_OFF_SETUP_SERVER_MODEL_ID,
-                                          element_index,
-                                          client_addr,
-                                          appkey_index,
-                                          &current,
-                                          NULL,
-                                          0,
-                                          0x00);
-}
-
-static errorcode_t power_onoff_update(uint16_t element_index)
-{
-  struct mesh_generic_state current;
-  current.kind = mesh_generic_state_on_power_up;
-  current.on_power_up.on_power_up = light_states.onpowerup;
-
-  return mesh_lib_generic_server_update(MESH_GENERIC_POWER_ON_OFF_SERVER_MODEL_ID,
-                                        element_index,
-                                        &current,
-                                        NULL,
-                                        0);
-}
-
-static errorcode_t power_onoff_update_and_publish(uint16_t element_index)
-{
-  errorcode_t e;
-
-  e = power_onoff_update(element_index);
-  if (e == bg_err_success) {
-    e = mesh_lib_generic_server_publish(MESH_GENERIC_POWER_ON_OFF_SERVER_MODEL_ID,
-                                        element_index,
-                                        mesh_generic_state_on_power_up);
-  }
-
-  return e;
-}
-
-static void power_onoff_request(uint16_t model_id,
-                                uint16_t element_index,
-                                uint16_t client_addr,
-                                uint16_t server_addr,
-                                uint16_t appkey_index,
-                                const struct mesh_generic_request *request,
-                                uint32_t transition_ms,
-                                uint16_t delay_ms,
-                                uint8_t request_flags)
-{
-  printf("ON POWER UP request received; state=<%s>\n",
-         light_states.onpowerup == 0 ? "OFF"
-         : light_states.onpowerup == 1 ? "ON"
-         : "RESTORE");
-
-  if (light_states.onpowerup == request->on_power_up) {
-    printf("Request for current state received; no op\n");
-  } else {
-    printf("Setting onpowerup to <%s>\n",
-           request->on_power_up == 0 ? "OFF"
-           : request->on_power_up == 1 ? "ON"
-           : "RESTORE");
-    light_states.onpowerup = request->on_power_up;
-    lightstate_save();
-  }
-
-  if (request_flags & MESH_REQUEST_FLAG_RESPONSE_REQUIRED) {
-    power_onoff_response(element_index, client_addr, appkey_index);
-  } else {
-    power_onoff_update(element_index);
-  }
-}
-
-
-static void power_onoff_change(uint16_t model_id,
-                               uint16_t element_index,
-                               const struct mesh_generic_state *current,
-                               const struct mesh_generic_state *target,
-                               uint32_t remaining_ms)
-{
-  // TODO
-}
-
 /*
  * Detects the Current State of the LIGHTBULB if ON or OFF and sends it to
  * the central node / friend to display the status of the LightBulb.
@@ -540,10 +447,6 @@ static void send_light_state(void)
 		light_states.onoff_current = MESH_GENERIC_ON_OFF_STATE_ON;
 		LED_state(LED1_STATE_ON);
 		LCD_write("LIGHT -> 'ON'",LCD_ROW_CLIENTADDR);
-//		request_count = 3;
-		//For testing Purpose
-//		onoff_update_and_publish(primary_element, 0); 	// 0 indicates this is first transmission
-//		gecko_cmd_hardware_set_soft_timer(TIMER_S_TO_TICKS(0.05), SOFT_TIMER_RETRANSMISSION, 1);
 		lightstate_save();
 		flag1 = 0;
 	}
@@ -574,9 +477,10 @@ static void send_pslot_state()
 			{
 				empty_count = 11;
 			}
-			light_states.ps_current = MESH_GENERIC_ON_OFF_STATE_OFF;	//This value denotes Parking Slot is Empty
+			light_states.ps_target = MESH_GENERIC_ON_OFF_STATE_OFF;	//This value denotes Parking Slot is Empty
 			printf("Parking Slot Empty\r\n");
 			LCD_write("SLOT EMPTY",LCD_ROW_CONNECTION);
+			LCD_write("", LCD_ROW_PASSKEY);
 			LED_state(LED0_STATE_OFF);
 			gecko_cmd_hardware_set_soft_timer(TIMER_S_TO_TICKS(0), SOFT_TIMER_PARKING_IN_PROCESS, 0);
 			//The below 3 lines should be written inside the interrupt routine for Proximity Sensor
@@ -591,7 +495,7 @@ static void send_pslot_state()
 	else if (dist_cm < light_states.proximity_t && confidence > light_states.proximity_min_con)
 	{
 
-		light_states.ps_current = MESH_GENERIC_ON_OFF_STATE_ON;	//This value denotes Parking Slot is Occupied
+		light_states.ps_target = MESH_GENERIC_ON_OFF_STATE_ON;	//This value denotes Parking Slot is Occupied
 		if (dist_cm < light_states.min_alarm_dist && confidence > light_states.proximity_min_con)
 		{
 			//In order to Blink LEDS indicating Car too close to the Sensor
@@ -607,6 +511,7 @@ static void send_pslot_state()
 		printf("D = %dcm \t C = %d\r\n",dist_cm, confidence);
 		sprintf(string_disp,"D=%dcm C=%d\r\n", dist_cm, confidence);
 		LCD_write(string_disp,LCD_ROW_CONNECTION);
+		LCD_write("SLOT OCCUPIED", LCD_ROW_PASSKEY);
 		if (empty_count!=0)
 		{
 			empty_count = 0;
@@ -647,7 +552,7 @@ static int load_ps_data()
 		light_states.proximity_min_con = PROXIMITY_MIN_CON;
 		light_states.min_alarm_dist = MIN_ALARM_DIST;
 		light_states.transtime = 0;
-		light_states.onpowerup = MESH_GENERIC_ON_POWER_UP_STATE_OFF;
+		light_states.onpowerup = MESH_GENERIC_ON_POWER_UP_STATE_RESTORE;
 
 		return 1;
 	}
@@ -707,12 +612,6 @@ void disp_device_addr()
 	LCD_write(string_disp,LCD_ROW_BTADDR1);
 }
 
-/*
-static uint32_t default_transition_time(void)
-{
-  return mesh_lib_transition_time_to_ms(light_states.transtime);
-}
-*/
 
 /**
  * Function calls to save and load state values
@@ -738,7 +637,7 @@ int main()
   **/
   flag1 = 1;
   flag2 = 1;
-  empty_count = 0;
+  empty_count = 1;
 
 
   gpio_cmu_init();
@@ -847,7 +746,7 @@ static void handle_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 		case SOFT_TIMER_LIGHTSTATE_SAVE:
 			printf("Saving the latest state values\r\n");
 			save_ps_data();
-			load_ps_data();
+//			load_ps_data();
 			break;
 
 		case SOFT_TIMER_RETRANSMISSION:
@@ -888,6 +787,14 @@ static void handle_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 			LED_state(LED0_STATE_PARKING_IN_PROCESS);
 			break;
 
+		case SOFT_TIMER_LED0_ON_DELAY:
+			LED_state(LED0_STATE_ON);
+			break;
+
+		case SOFT_TIMER_LED0_OFF_DELAY:
+			LED_state(LED0_STATE_OFF);
+			break;
+
 		default:
 			break;
 		}
@@ -903,7 +810,7 @@ static void handle_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 			if (evt->data.evt_mesh_node_initialized.provisioned)
 			{
 				printf ("Node provisioned\r\n");
-				printf("address:%x, ivi:%ld\r\n", evt->data.evt_mesh_node_initialized.address, evt->data.evt_mesh_node_initialized.ivi);
+				printf("Node address:%x, ivi:%ld\r\n", evt->data.evt_mesh_node_initialized.address, evt->data.evt_mesh_node_initialized.ivi);
 				LCD_write("Node provisioned",LCD_ROW_BTADDR2);
 				primary_element = 0;			// Primary ELement Index Hardcoded
 				light_node_init();
@@ -953,19 +860,16 @@ static void handle_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 			uint16_t netkey_index = evt->data.evt_mesh_node_key_added.netkey_index;
 			printf ("Received New %s Key with Index %d\r\n" ,
 					netkey_type ==0 ? "Network" : "Application" , netkey_index );
-			struct gecko_msg_mesh_node_display_output_oob_evt_t *disp_oob =
-					(struct gecko_msg_mesh_node_display_output_oob_evt_t *)&(evt->data);
 			break;
 
 		case gecko_evt_mesh_node_display_output_oob_id:
-		{
+			printf("\r\n");
 			struct gecko_msg_mesh_node_display_output_oob_evt_t *pOOB = (struct gecko_msg_mesh_node_display_output_oob_evt_t *)&(evt->data);
 			printf("gecko_msg_mesh_node_display_output_oob_evt_t: action %d, size %d\r\n", pOOB->output_action, pOOB->output_size);
-			printf("%2.2x ", pOOB->data.data[pOOB->data.len-1]);
-			sprintf(string_disp,"PASSKEY : %2.2x", pOOB->data.data[pOOB->data.len-1]);
+			printf("%2.2d ", pOOB->data.data[pOOB->data.len-1]);
+			sprintf(string_disp,"PASSKEY : %2.2d", pOOB->data.data[pOOB->data.len-1]);
 			LCD_write(string_disp, LCD_ROW_PASSKEY);
 			printf("\r\n");
-		}
 		break;
 
 		case gecko_evt_mesh_node_provisioning_failed_id:
@@ -979,7 +883,6 @@ static void handle_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 		case gecko_evt_mesh_node_provisioned_id:
 			printf ("Node Provisioned\r\n");
 			LCD_write("Node Provisioned",LCD_ROW_BTADDR2);
-//			uint32_t ivindex = evt->data.evt_mesh_node_provisioned.iv_index;
 			uint16_t unicast_address = evt->data.evt_mesh_node_provisioned.address;
 			printf("Server address : %d ", unicast_address);
 			primary_element = 0;			// Primary ELement Index Hardcoded
@@ -1012,15 +915,10 @@ static void handle_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 
 		case gecko_evt_mesh_lpn_friendship_established_id:
 			printf("friendship established\r\n");
-			printf("Address : %x\r\n",evt->data.evt_mesh_lpn_friendship_established.friend_address);
+			friend_address = evt->data.evt_mesh_lpn_friendship_established.friend_address;
+			printf("Friend Address : %x\r\n", friend_address);
 			LCD_write("Friendship"	, LCD_ROW_BTADDR2);
-
-			/*******************************/
-			//Enable Interrupts Only if Friendship is established
-//			gpio_irq_init();
-//			i2c_init();
-//			proximity_powerup_config();
-//			proximity_config();
+			friend_num++;
 			break;
 
 		case gecko_evt_mesh_lpn_friendship_failed_id:
@@ -1032,20 +930,15 @@ static void handle_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 			{
 				printf("timer failure?!  %x\r\n", result);
 			}
+			friend_address = 0xFFFF;
 			break;
 
 		case gecko_evt_mesh_lpn_friendship_terminated_id:
 			printf("friendship terminated\r\n");
 			LCD_write("Friend lost",LCD_ROW_BTADDR2);
-			if (num_connections == 0)
-			{
-				// try again in 2 seconds
-				result  = gecko_cmd_hardware_set_soft_timer(TIMER_S_TO_TICKS(2), SOFT_TIMER_FIND_FRIEND, 1)->result;
-				if (result)
-				{
-					printf("timer failure?!  %x\r\n", result);
-				}
-			}
+			gecko_cmd_hardware_set_soft_timer(TIMER_S_TO_TICKS(2), SOFT_TIMER_FIND_FRIEND, 1);
+			friend_address = 0xFFFF;
+			friend_num--;
 			break;
 
 		case gecko_evt_le_connection_closed_id:
@@ -1058,13 +951,6 @@ static void handle_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 			printf("gecko_evt_le_connection_closed_id\r\n");
 			conn_handle = 0xFF;
 			num_connections--;
-//			if (num_connections > 0)
-//			{
-//				if (--num_connections == 0)
-//				{
-//					lpn_init();
-//				}
-//			}
 			break;
 
 		case gecko_evt_mesh_node_reset_id:
@@ -1073,49 +959,38 @@ static void handle_gecko_event(uint32_t evt_id, struct gecko_cmd_packet *evt)
 			break;
 
 		case gecko_evt_system_external_signal_id:
-
-			if (init_complete == 1 && (evt->data.evt_system_external_signal.extsignals & MOTION_EVENT))
+			if (friend_num)			//Service these routines only if Friendship is Established
 			{
-				CORE_ATOMIC_IRQ_DISABLE();
-				EXT_EVENT &= ~MOTION_EVENT;
-				CORE_ATOMIC_IRQ_ENABLE();
+				if (init_complete == 1 && (evt->data.evt_system_external_signal.extsignals & MOTION_EVENT))
+				{
+					CORE_ATOMIC_IRQ_DISABLE();
+					EXT_EVENT &= ~MOTION_EVENT;
+					CORE_ATOMIC_IRQ_ENABLE();
 
-				/*LPN poll can be skipped (DOES AUTOMATICALLY)*/
-//				result = gecko_cmd_mesh_lpn_poll()->result;
-//				if (result)
-//				{
-//				printf("lpn polling failed : 0x%x\r\n", result);
-//				}
-				send_light_state();
-				gecko_cmd_hardware_set_soft_timer(TIMER_S_TO_TICKS(MOTION_INT_RENABLE), SOFT_TIMER_MOTION_INTERRUPT_ENABLE, 1);
-				gecko_cmd_hardware_set_soft_timer(TIMER_S_TO_TICKS(0), SOFT_TIMER_MOTION_LIGHT_OFF, 1);
-				letimer_start();
-			}
+					send_light_state();
+					gecko_cmd_hardware_set_soft_timer(TIMER_S_TO_TICKS(MOTION_INT_RENABLE), SOFT_TIMER_MOTION_INTERRUPT_ENABLE, 1);
+					gecko_cmd_hardware_set_soft_timer(TIMER_S_TO_TICKS(0), SOFT_TIMER_MOTION_LIGHT_OFF, 1);
+					letimer_start();
+				}
 
-			if (init_complete == 1 && (evt->data.evt_system_external_signal.extsignals & PROXIMITY_EVENT))
-			{
-				CORE_ATOMIC_IRQ_DISABLE();
-				EXT_EVENT &= ~PROXIMITY_EVENT;
-				CORE_ATOMIC_IRQ_ENABLE();
+				if (init_complete == 1 && (evt->data.evt_system_external_signal.extsignals & PROXIMITY_EVENT))
+				{
+					CORE_ATOMIC_IRQ_DISABLE();
+					EXT_EVENT &= ~PROXIMITY_EVENT;
+					CORE_ATOMIC_IRQ_ENABLE();
 
-				/*LPN poll can be skipped (DOES AUTOMATICALLY)*/
-//				result = gecko_cmd_mesh_lpn_poll()->result;
-//				if (result)
-//				{
-//					printf("lpn polling failed : 0x%x\r\n", result);
-//				}
+					send_pslot_state();
+					gecko_cmd_hardware_set_soft_timer(TIMER_S_TO_TICKS(0.1), SOFT_TIMER_PROXIMITY_INTERRUPT_ENABLE, 1);
+				}
 
-				send_pslot_state();
-				gecko_cmd_hardware_set_soft_timer(TIMER_S_TO_TICKS(0.1), SOFT_TIMER_PROXIMITY_INTERRUPT_ENABLE, 1);
-			}
-
-			if (evt->data.evt_system_external_signal.extsignals & LETIMER_EVENT)
-			{
-				CORE_ATOMIC_IRQ_DISABLE();
-				EXT_EVENT &= ~LETIMER_EVENT;
-				CORE_ATOMIC_IRQ_ENABLE();
-				printf("LETIMER EVENT\r\n");
-				ecode = proximity_takemeasurement();
+				if (evt->data.evt_system_external_signal.extsignals & LETIMER_EVENT)
+				{
+					CORE_ATOMIC_IRQ_DISABLE();
+					EXT_EVENT &= ~LETIMER_EVENT;
+					CORE_ATOMIC_IRQ_ENABLE();
+					printf("LETIMER EVENT\r\n");
+					ecode = proximity_takemeasurement();
+				}
 			}
 			break;
 
