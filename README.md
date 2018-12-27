@@ -1,4 +1,4 @@
-# IOT-Embedded-Firmare
+# IOT-Embedded-Firmware
 
 Projects completed under Prof. Keith Graham in IOT Embedded Firmware Course.
 
