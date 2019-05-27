@@ -1,4 +1,5 @@
 # Smart Car Parking System using Bluetooth Mesh
+This project was completed in the course IOT Embedded Firmware at University of Colorado, Boulder under the guidance of Professor Keith Graham in November-December 2019.
 
 ## Hardware and Software Components:
 - Sparkfun Distance Sensor Breakout - RFD77402.(Proximity Sensor)
